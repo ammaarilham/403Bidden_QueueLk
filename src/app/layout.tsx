@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Template-NEXT",
+  title: "Queue.lk",
   description:
     "A clean Next.js template with TypeScript, TailwindCSS, Shadcn/ui, and Prettier, developed by Thilina Rathnayaka (A.K.A Edward Hyde). Optimized for quick project setup with handy packages.",
   keywords: ["Next.js", "TypeScript", "TailwindCSS", "Shadcn/ui", "Template"],
@@ -20,9 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={cn("relative h-full antialiased", inter.className)}
-      >
+      <body className={cn("relative h-full antialiased", inter.className)}>
         <main className="relative flex min-h-screen flex-col">
           <div className="flex-1 flex-grow">{children}</div>
         </main>
