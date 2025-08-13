@@ -7,10 +7,11 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Queue.lk",
-  description:
-    "A clean Next.js template with TypeScript, TailwindCSS, Shadcn/ui, and Prettier, developed by Thilina Rathnayaka (A.K.A Edward Hyde). Optimized for quick project setup with handy packages.",
-  keywords: ["Next.js", "TypeScript", "TailwindCSS", "Shadcn/ui", "Template"],
-  authors: [{ name: "Thilina R. (Edward Hyde)", url: "https://thilina.dev" }],
+  description: "Effortless Booking, No More Waiting",
+  authors: [
+    { name: "Ammaar ilham", url: "https://ammaarilham.dev" },
+    { name: "Thilina R. (Edward Hyde)", url: "https://thilina.dev" },
+  ],
 };
 
 export default function RootLayout({
