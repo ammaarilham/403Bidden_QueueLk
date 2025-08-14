@@ -1,27 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
-
-import { HiMenu, HiX, HiOutlineLogout } from "react-icons/hi";
-import {
-  FaTicketAlt,
-  FaQuestionCircle,
-  FaLifeRing,
-  FaCog,
-  FaSignOutAlt,
-} from "react-icons/fa";
-import { FiHeadphones, FiTool } from "react-icons/fi";
-import { FiMail, FiSearch, FiSettings } from "react-icons/fi";
-import { AiOutlineDashboard } from "react-icons/ai"; // Ant Design
-
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { HiMenu, HiX, HiOutlineLogout } from "react-icons/hi";
+import { FaTicketAlt } from "react-icons/fa";
+import { FiMail, FiTool, FiSettings } from "react-icons/fi";
+import { AiOutlineDashboard } from "react-icons/ai";
+import { motion } from "framer-motion";
+import { TbUsers } from "react-icons/tb";
+import { CiSettings } from "react-icons/ci";
 
 type User = {
   username: string;
   profilePicUrl: string;
-  type: number; // 1 for admin, 2 for customer
+  type: number; // 1 = admin, 2 = customer
 };
 
 const Navbar: React.FC = () => {
@@ -30,16 +22,18 @@ const Navbar: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Fetch session
   useEffect(() => {
-    fetch("http://localhost:5000/api/session", {
-      credentials: "include",
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch session");
-        return res.json();
-      })
-      .then((data) => {
-        if (data.loggedIn) {
+    const checkSession = async () => {
+      try {
+        const res = await fetch("http://localhost:5000/api/session", {
+          credentials: "include",
+        });
+        const data = await res.json();
+
+        if (!data.loggedIn) {
+          router.replace("/login");
+        } else {
           setUser({
             username: data.user.username,
             profilePicUrl:
@@ -47,69 +41,89 @@ const Navbar: React.FC = () => {
               "/assets/images/common/default-profile.png",
             type: data.user.type,
           });
-        } else {
-          setUser(null);
         }
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error(err);
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+        router.replace("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (loading) {
-    return (
-      <nav className="flex items-center justify-between bg-white px-4 py-3 shadow-md">
-        <div>Loading...</div>
-      </nav>
-    );
-  }
+    checkSession();
+  }, [router]);
 
-  if (!user) return null;
+  if (loading) return null; // hide navbar while checking session
+  if (!user) return null; // safety
 
-  const userTypeLabel =
-    user.type === 1 ? "Admin" : user.type === 2 ? "Customer" : "-";
+  const userTypeLabel = user.type === 1 ? "Admin" : "Customer";
 
-  const pages = [
-    {
-      name: "Dashboard",  
-      href: "/customer-dashboard",
-      icon: <AiOutlineDashboard size={20} />,
-    },
-    {
-      name: "Queue Booking",
-      href: "/queue_booking",
-      icon: <FaTicketAlt size={20} />,
-    },
-    { name: "Inquiries", href: "#", icon: <FiMail size={20} /> },
-    { name: "Support", href: "#", icon: <FiTool size={20} /> },
-    { name: "Settings", href: "#", icon: <FiSettings size={20} /> },
-  ];
+  // Role-based pages
+  const pages =
+    user.type === 1
+      ? [
+          {
+            name: "Admin Dashboard",
+            href: "/admin-dashboard",
+            icon: <AiOutlineDashboard size={20} />,
+          },
+          {
+            name: "Add Institution",
+            href: "/admin-dashboard/institutions",
+            icon: <TbUsers size={20} />,
+          },
+          {
+            name: "Add Service",
+            href: "/admin-dashboard/services",
+            icon: <CiSettings size={20} />,
+          },
+          {
+            name: "Add Event",
+            href: "/admin-dashboard/events",
+            icon: <FaTicketAlt size={20} />,
+          },
+          { name: "Support", href: "#", icon: <FiTool size={20} /> },
+          { name: "Settings", href: "#", icon: <FiSettings size={20} /> },
+        ]
+      : [
+          {
+            name: "Customer Dashboard",
+            href: "/customer-dashboard",
+            icon: <AiOutlineDashboard size={20} />,
+          },
+          {
+            name: "Queue Booking",
+            href: "/queue_booking",
+            icon: <FaTicketAlt size={20} />,
+          },
+          { name: "Inquiries", href: "#", icon: <FiMail size={20} /> },
+          { name: "Support", href: "#", icon: <FiTool size={20} /> },
+          { name: "Settings", href: "#", icon: <FiSettings size={20} /> },
+        ];
 
   const handleLogout = async () => {
     try {
       const res = await fetch("http://localhost:5000/api/logout", {
         method: "POST",
-        credentials: "include", // send cookies
+        credentials: "include",
       });
-
-      if (res.ok) {
-        // Redirect to frontend login page
-        window.location.href = "http://localhost:3000/login";
-      } else {
-        console.error("Logout failed");
-      }
-    } catch (error) {
-      console.error("Logout error", error);
+      if (res.ok) router.replace("/login");
+    } catch (err) {
+      console.error("Logout error", err);
     }
   };
 
   return (
     <>
-      <nav className="fixed left-0 right-0 top-0 flex items-center justify-between bg-white px-4 py-3">
-        {/* Left: profile pic + username + user type */}
-        <div className="flex items-center space-x-3">
+      <nav className="sh fixed left-0 right-0 top-0 flex items-center justify-between bg-white px-4 py-3">
+        <div
+          onClick={() =>
+            router.push(
+              user.type === 1 ? "/admin-dashboard" : "/customer-dashboard"
+            )
+          }
+          className="flex cursor-pointer items-center space-x-3"
+        >
           <img
             src={user.profilePicUrl}
             alt="Profile"
@@ -121,7 +135,6 @@ const Navbar: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: hamburger only when menu is closed */}
         {!menuOpen && (
           <button
             onClick={() => setMenuOpen(true)}
@@ -139,7 +152,6 @@ const Navbar: React.FC = () => {
           menuOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        {/* Close button inside sliding menu, top right */}
         <div>
           <div className="mb-8 flex items-center justify-between p-4">
             <button
@@ -150,7 +162,6 @@ const Navbar: React.FC = () => {
               <HiX size={28} />
             </button>
 
-            {/* Logo at top of sliding menu */}
             <motion.img
               src="/assets/images/hero/logo-4.png"
               alt="Logo"
@@ -159,14 +170,14 @@ const Navbar: React.FC = () => {
               whileHover={{ scale: 1.05 }}
             />
           </div>
-          {/* Menu links */}
+
           <nav className="flex flex-col space-y-4 px-6">
             {pages.map(({ name, href, icon }) => (
               <a
                 key={name}
                 href={href}
                 className="hover:text-primary flex items-center gap-3 text-lg font-medium"
-                onClick={() => setMenuOpen(false)} // close menu on click
+                onClick={() => setMenuOpen(false)}
               >
                 {icon}
                 {name}
@@ -184,11 +195,11 @@ const Navbar: React.FC = () => {
         </button>
       </div>
 
-      {/* Overlay to close menu */}
+      {/* Overlay */}
       {menuOpen && (
         <div
           onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-30 bg-black/20 bg-opacity-20"
+          className="fixed inset-0 z-30 bg-black/20"
         />
       )}
     </>

@@ -1,19 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Anton&display=swap");
 
 @import "tailwindcss";
 @import "tw-animate-css";
 
 .font-inter {
-  font-family: 'Inter', sans-serif !important;
+  font-family: "Inter", sans-serif !important;
 }
 
 .font-anton {
-    font-family: 'Anton', sans-serif !important;
+  font-family: "Anton", sans-serif !important;
 }
 
 .bg-primary {
-  background-color: #EBB517 !important;
+  background-color: #ebb517 !important;
+}
+.text-primary {
+  color: #ebb517 !important;
+}
+
+.border-primary {
+  color: #ebb517 !important;
 }
 
 @custom-variant dark (&:is(.dark *));
