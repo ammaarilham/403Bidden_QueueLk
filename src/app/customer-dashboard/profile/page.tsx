@@ -7,6 +7,8 @@ import { IoIosArrowForward } from "react-icons/io";
 import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
 import Swal from "sweetalert2";
 import { motion } from "framer-motion";
+import { FiEye } from "react-icons/fi"; // make sure this is at the top with your imports
+import QRCode from "react-qr-code";
 
 const Page = () => {
   const [success, setSuccess] = useState(false);
@@ -20,8 +22,13 @@ const Page = () => {
     alternative_contact?: string;
     registered_institution: string;
     profile_picture: string;
+    nic_document?: string;
+    birth_certificate_document?: string;
+    driving_license_document?: string;
+    other_document1?: string;
+    other_document2?: string;
+    other_document3?: string;
   } | null>(null);
-
   useEffect(() => {
     fetch("http://localhost:5000/api/profile", { credentials: "include" })
       .then((res) => res.json())
@@ -68,6 +75,25 @@ const Page = () => {
       form.elements.namedItem("profile_picture") as HTMLInputElement
     ).files?.[0];
 
+    const nic_document = (
+      form.elements.namedItem("nic_document") as HTMLInputElement
+    ).files?.[0];
+    const birth_certificate_document = (
+      form.elements.namedItem("birth_certificate_document") as HTMLInputElement
+    ).files?.[0];
+    const driving_license_document = (
+      form.elements.namedItem("driving_license_document") as HTMLInputElement
+    ).files?.[0];
+    const other_document1 = (
+      form.elements.namedItem("other_document1") as HTMLInputElement
+    ).files?.[0];
+    const other_document2 = (
+      form.elements.namedItem("other_document2") as HTMLInputElement
+    ).files?.[0];
+    const other_document3 = (
+      form.elements.namedItem("other_document3") as HTMLInputElement
+    ).files?.[0];
+
     const formData = new FormData();
     formData.append("full_name", full_name);
     formData.append("official_title", official_title);
@@ -76,6 +102,25 @@ const Page = () => {
     formData.append("mobile_number", mobile_number);
     formData.append("alternative_contact", alternative_contact || "");
     formData.append("registered_institution", registered_institution);
+
+    // File fields (append only if selected)
+    const fileFields = [
+      "profile_picture",
+      "nic_document",
+      "birth_certificate_document",
+      "driving_license_document",
+      "other_document1",
+      "other_document2",
+      "other_document3",
+    ];
+
+    fileFields.forEach((field) => {
+      const file = (form.elements.namedItem(field) as HTMLInputElement)
+        ?.files?.[0];
+      if (file) {
+        formData.append(field, file);
+      }
+    });
 
     if (profile_picture) {
       formData.append("profile_picture", profile_picture);
@@ -136,13 +181,21 @@ const Page = () => {
 
           {/* Stats */}
           <div className="flex divide-x divide-gray-300 overflow-hidden rounded-lg">
-            <div className="flex-1 p-5 text-center">
-              <h2 className="text-2xl font-bold text-gray-800">0</h2>
-              <p className="text-primary mt-1 text-sm font-medium">
-                Recent Activity
-              </p>
+            <div className="flex-1 p-2 text-center">
+              <div className="text-center">
+                <p className="font-sm mb-2 text-gray-700">
+                  Scan QR to view all your documents:
+                </p>
+                <div className="inline-block rounded-lg bg-white shadow-md">
+                  <QRCode
+                    value={`http://localhost:3000/customer-dashboard/documents`}
+                    size={140}
+                    level="H"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex-1 p-5 text-center">
+            <div className="flex-1 p-2 text-center">
               <h2 className="text-2xl font-bold text-gray-800">
                 {bookingCount}
               </h2>
@@ -250,7 +303,7 @@ const Page = () => {
           </div>
 
           {/* Profile Picture */}
-          <div>
+          <div className="">
             <label className="mb-2 block text-sm font-medium text-gray-700">
               Profile Picture
             </label>
@@ -268,6 +321,103 @@ const Page = () => {
               className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
             />
           </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              NIC Document (PDF or Image)
+            </label>
+            {user.nic_document && (
+              <a
+                href={`/assets/images/other_documents/${user.nic_document}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
+              >
+                <FiEye className="text-gray-600" />
+                View Current File
+              </a>
+            )}
+            <input
+              name="nic_document"
+              type="file"
+              accept="image/*,application/pdf"
+              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
+            />
+          </div>
+
+          {/* Birth Certificate */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Birth Certificate (PDF or Image)
+            </label>
+            {user.birth_certificate_document && (
+              <a
+                href={`/assets/images/other_documents/${user.birth_certificate_document}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
+              >
+                <FiEye className="text-gray-600" />
+                View Current File
+              </a>
+            )}
+            <input
+              name="birth_certificate_document"
+              type="file"
+              accept="image/*,application/pdf"
+              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
+            />
+          </div>
+
+          {/* Driving License */}
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Driving License (PDF or Image)
+            </label>
+            {user.driving_license_document && (
+              <a
+                href={`/assets/images/other_documents/${user.driving_license_document}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
+              >
+                <FiEye className="text-gray-600" />
+                View Current File
+              </a>
+            )}
+            <input
+              name="driving_license_document"
+              type="file"
+              accept="image/*,application/pdf"
+              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
+            />
+          </div>
+
+          {/* Other Documents */}
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Other Document {i} (PDF or Image)
+              </label>
+              {user[`other_document${i}` as keyof typeof user] && (
+                <a
+                  href={`/assets/images/other_documents/${user[`other_document${i}` as keyof typeof user]}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
+                >
+                  <FiEye className="text-gray-600" />
+                  View Current File
+                </a>
+              )}
+              <input
+                name={`other_document${i}`}
+                type="file"
+                accept="image/*,application/pdf"
+                className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
+              />
+            </div>
+          ))}
 
           <button
             type="submit"

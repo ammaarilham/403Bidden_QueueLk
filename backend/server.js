@@ -59,21 +59,47 @@ app.use(
 
 // Login/ Sign up / Logout functions  ----------------------------------------------------------
 
+// const storage = multer.diskStorage({
+//   destination: function (req, file, cb) {
+//     // Go one level up from backend
+//     const dir = path.resolve(
+//       __dirname,
+//       "../public/assets/images/profile_pictures"
+//     );
+//     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+//     console.log("Saving profile pictures to:", dir);
+//     cb(null, dir);
+//   },
+//   filename: function (req, file, cb) {
+//     const randomName = crypto.randomBytes(5).toString("hex");
+//     const ext = path.extname(file.originalname);
+//     cb(null, randomName + ext);
+//   },
+// });
+
+// const upload = multer({ storage });
+
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Go one level up from backend
-    const dir = path.resolve(
-      __dirname,
-      "../public/assets/images/profile_pictures"
-    );
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    console.log("Saving profile pictures to:", dir);
-    cb(null, dir);
+    let uploadPath;
+
+    if (file.fieldname === "profile_picture") {
+      uploadPath = path.join(__dirname, "../public/assets/images/profile_picture");
+    } else {
+      uploadPath = path.join(__dirname, "../public/assets/images/other_documents");
+    }
+
+    // Ensure folder exists
+    fs.mkdirSync(uploadPath, { recursive: true });
+
+    console.log(`Saving ${file.fieldname} to:`, uploadPath);
+    cb(null, uploadPath);
   },
   filename: function (req, file, cb) {
-    const randomName = crypto.randomBytes(5).toString("hex");
     const ext = path.extname(file.originalname);
-    cb(null, randomName + ext);
+    const name = `${file.fieldname}-${Date.now()}${ext}`;
+    cb(null, name);
   },
 });
 
@@ -98,9 +124,102 @@ app.get("/api/profile", async (req, res) => {
   }
 });
 
+// app.post(
+//   "/api/profile/update",
+//   upload.single("profile_picture"),
+//   async (req, res) => {
+//     try {
+//       if (!req.session.user)
+//         return res.status(401).json({ error: "Not logged in" });
+
+//       const {
+//         full_name,
+//         official_title,
+//         employee_id,
+//         official_email,
+//         mobile_number,
+//         alternative_contact,
+//         registered_institution,
+//       } = req.body;
+
+//       let profile_picture = null;
+
+//       if (req.file) {
+//         // Multer already saved the file in the correct folder
+//         console.log("File received by multer:");
+//         console.log("Original name:", req.file.originalname);
+//         console.log("Saved name:", req.file.filename);
+//         console.log("Saved path:", req.file.path);
+//         console.log("MIME type:", req.file.mimetype);
+//         console.log("Size:", req.file.size);
+
+//         // Optional: read the file to confirm
+//         const filePath = req.file.path;
+//         fs.readFile(filePath, (err, data) => {
+//           if (err) console.error("Error reading file after upload:", err);
+//           else console.log("File read successfully, bytes:", data.length);
+//         });
+
+//         profile_picture = req.file.filename;
+
+//         // Update session
+//         if (req.session.user) {
+//           req.session.user.profile_picture = profile_picture;
+//         }
+//       } else {
+//         console.log("No file uploaded in this request");
+//       }
+
+//       // Build query dynamically for optional fields
+//       const fields = [];
+//       const values = [];
+
+//       if (full_name) fields.push("full_name = ?") && values.push(full_name);
+//       if (official_title)
+//         fields.push("official_title = ?") && values.push(official_title);
+//       if (employee_id)
+//         fields.push("employee_id = ?") && values.push(employee_id);
+//       if (official_email)
+//         fields.push("official_email = ?") && values.push(official_email);
+//       if (mobile_number)
+//         fields.push("mobile_number = ?") && values.push(mobile_number);
+//       if (alternative_contact)
+//         fields.push("alternative_contact = ?") &&
+//           values.push(alternative_contact);
+//       if (registered_institution)
+//         fields.push("registered_institution = ?") &&
+//           values.push(registered_institution);
+//       if (profile_picture)
+//         fields.push("profile_picture = ?") && values.push(profile_picture);
+
+//       if (fields.length === 0)
+//         return res.status(400).json({ error: "No fields to update" });
+
+//       console.log("Updating DB with fields:", fields.join(", "));
+
+//       const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = ?`;
+//       values.push(req.session.user.id);
+
+//       await pool.query(sql, values);
+
+//       res.json({ message: "Profile updated successfully" });
+//     } catch (err) {
+//       console.error("Error in profile update route:", err);
+//       res.status(500).json({ error: "Server error" });
+//     }
+//   }
+// );
 app.post(
   "/api/profile/update",
-  upload.single("profile_picture"),
+  upload.fields([
+    { name: "profile_picture", maxCount: 1 },
+    { name: "nic_document", maxCount: 1 },
+    { name: "birth_certificate_document", maxCount: 1 },
+    { name: "driving_license_document", maxCount: 1 },
+    { name: "other_document1", maxCount: 1 },
+    { name: "other_document2", maxCount: 1 },
+    { name: "other_document3", maxCount: 1 },
+  ]),
   async (req, res) => {
     try {
       if (!req.session.user)
@@ -116,35 +235,24 @@ app.post(
         registered_institution,
       } = req.body;
 
-      let profile_picture = null;
+      // Prepare files
+      const files = req.files || {};
+      const profile_picture = files["profile_picture"]?.[0]?.filename || null;
+      const nic_document = files["nic_document"]?.[0]?.filename || null;
+      const birth_certificate_document =
+        files["birth_certificate_document"]?.[0]?.filename || null;
+      const driving_license_document =
+        files["driving_license_document"]?.[0]?.filename || null;
+      const other_document1 = files["other_document1"]?.[0]?.filename || null;
+      const other_document2 = files["other_document2"]?.[0]?.filename || null;
+      const other_document3 = files["other_document3"]?.[0]?.filename || null;
 
-      if (req.file) {
-        // Multer already saved the file in the correct folder
-        console.log("File received by multer:");
-        console.log("Original name:", req.file.originalname);
-        console.log("Saved name:", req.file.filename);
-        console.log("Saved path:", req.file.path);
-        console.log("MIME type:", req.file.mimetype);
-        console.log("Size:", req.file.size);
-
-        // Optional: read the file to confirm
-        const filePath = req.file.path;
-        fs.readFile(filePath, (err, data) => {
-          if (err) console.error("Error reading file after upload:", err);
-          else console.log("File read successfully, bytes:", data.length);
-        });
-
-        profile_picture = req.file.filename;
-
-        // Update session
-        if (req.session.user) {
-          req.session.user.profile_picture = profile_picture;
-        }
-      } else {
-        console.log("No file uploaded in this request");
+      // Update session if profile_picture uploaded
+      if (req.session.user && profile_picture) {
+        req.session.user.profile_picture = profile_picture;
       }
 
-      // Build query dynamically for optional fields
+      // Build query dynamically
       const fields = [];
       const values = [];
 
@@ -158,18 +266,29 @@ app.post(
       if (mobile_number)
         fields.push("mobile_number = ?") && values.push(mobile_number);
       if (alternative_contact)
-        fields.push("alternative_contact = ?") &&
-          values.push(alternative_contact);
+        fields.push("alternative_contact = ?") && values.push(alternative_contact);
       if (registered_institution)
-        fields.push("registered_institution = ?") &&
-          values.push(registered_institution);
+        fields.push("registered_institution = ?") && values.push(registered_institution);
+
       if (profile_picture)
         fields.push("profile_picture = ?") && values.push(profile_picture);
+      if (nic_document)
+        fields.push("nic_document = ?") && values.push(nic_document);
+      if (birth_certificate_document)
+        fields.push("birth_certificate_document = ?") &&
+          values.push(birth_certificate_document);
+      if (driving_license_document)
+        fields.push("driving_license_document = ?") &&
+          values.push(driving_license_document);
+      if (other_document1)
+        fields.push("other_document1 = ?") && values.push(other_document1);
+      if (other_document2)
+        fields.push("other_document2 = ?") && values.push(other_document2);
+      if (other_document3)
+        fields.push("other_document3 = ?") && values.push(other_document3);
 
       if (fields.length === 0)
         return res.status(400).json({ error: "No fields to update" });
-
-      console.log("Updating DB with fields:", fields.join(", "));
 
       const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = ?`;
       values.push(req.session.user.id);
@@ -183,7 +302,6 @@ app.post(
     }
   }
 );
-
 app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
