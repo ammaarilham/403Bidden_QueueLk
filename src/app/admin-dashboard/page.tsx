@@ -20,7 +20,7 @@ const page = () => {
                 className="w-full cursor-pointer rounded-xl"
               />
             </a>
-            <a href="/inquiries">
+            <a href="/admin-dashboard/events">
               <motion.img
                 src="/assets/images/admin-dashboard/add-event.png"
                 alt="Inquiries Image"

@@ -1,15 +1,22 @@
+// Required Libraries --------------------------------------------------
 const express = require("express");
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcrypt");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 
 const app = express();
 
-app.use(cors({
-  origin: "http://localhost:3000", // your frontend origin exactly
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: "http://localhost:3000", // your frontend origin exactly
+    credentials: true,
+  })
+);
 
 app.use(bodyParser.json());
 
@@ -31,26 +38,212 @@ const pool = mysql.createPool({
   waitForConnections: true,
 });
 
-
-
 const session = require("express-session");
 const MySQLStore = require("express-mysql-session")(session);
 
 const sessionStore = new MySQLStore({}, pool.promise ? pool.promise() : pool); // connect store to your pool
 
-app.use(session({
-  key: 'user_sid',
-  secret: 'your_secret_key', // change to a strong secret
-  store: sessionStore,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    maxAge: 1000 * 60 * 60, // 1 day session
-    httpOnly: true,
-  }
-}));
+app.use(
+  session({
+    key: "user_sid",
+    secret: "your_secret_key", // change to a strong secret
+    store: sessionStore,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 1000 * 60 * 60, // 1 day session
+      httpOnly: true,
+    },
+  })
+);
 
-// Sign up route
+// Login/ Sign up / Logout functions  ----------------------------------------------------------
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // Go one level up from backend
+    const dir = path.resolve(
+      __dirname,
+      "../public/assets/images/profile_pictures"
+    );
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    console.log("Saving profile pictures to:", dir);
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const randomName = crypto.randomBytes(5).toString("hex");
+    const ext = path.extname(file.originalname);
+    cb(null, randomName + ext);
+  },
+});
+
+const upload = multer({ storage });
+
+// Fetch logged-in user profile
+app.get("/api/profile", async (req, res) => {
+  try {
+    if (!req.session.user)
+      return res.status(401).json({ error: "Not logged in" });
+
+    const [rows] = await pool.query("SELECT * FROM users WHERE id = ?", [
+      req.session.user.id,
+    ]);
+    if (rows.length === 0)
+      return res.status(404).json({ error: "User not found" });
+
+    res.json({ user: rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post(
+  "/api/profile/update",
+  upload.single("profile_picture"),
+  async (req, res) => {
+    try {
+      if (!req.session.user)
+        return res.status(401).json({ error: "Not logged in" });
+
+      const {
+        full_name,
+        official_title,
+        employee_id,
+        official_email,
+        mobile_number,
+        alternative_contact,
+        registered_institution,
+      } = req.body;
+
+      let profile_picture = null;
+
+      if (req.file) {
+        // Multer already saved the file in the correct folder
+        console.log("File received by multer:");
+        console.log("Original name:", req.file.originalname);
+        console.log("Saved name:", req.file.filename);
+        console.log("Saved path:", req.file.path);
+        console.log("MIME type:", req.file.mimetype);
+        console.log("Size:", req.file.size);
+
+        // Optional: read the file to confirm
+        const filePath = req.file.path;
+        fs.readFile(filePath, (err, data) => {
+          if (err) console.error("Error reading file after upload:", err);
+          else console.log("File read successfully, bytes:", data.length);
+        });
+
+        profile_picture = req.file.filename;
+
+        // Update session
+        if (req.session.user) {
+          req.session.user.profile_picture = profile_picture;
+        }
+      } else {
+        console.log("No file uploaded in this request");
+      }
+
+      // Build query dynamically for optional fields
+      const fields = [];
+      const values = [];
+
+      if (full_name) fields.push("full_name = ?") && values.push(full_name);
+      if (official_title)
+        fields.push("official_title = ?") && values.push(official_title);
+      if (employee_id)
+        fields.push("employee_id = ?") && values.push(employee_id);
+      if (official_email)
+        fields.push("official_email = ?") && values.push(official_email);
+      if (mobile_number)
+        fields.push("mobile_number = ?") && values.push(mobile_number);
+      if (alternative_contact)
+        fields.push("alternative_contact = ?") &&
+          values.push(alternative_contact);
+      if (registered_institution)
+        fields.push("registered_institution = ?") &&
+          values.push(registered_institution);
+      if (profile_picture)
+        fields.push("profile_picture = ?") && values.push(profile_picture);
+
+      if (fields.length === 0)
+        return res.status(400).json({ error: "No fields to update" });
+
+      console.log("Updating DB with fields:", fields.join(", "));
+
+      const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = ?`;
+      values.push(req.session.user.id);
+
+      await pool.query(sql, values);
+
+      res.json({ message: "Profile updated successfully" });
+    } catch (err) {
+      console.error("Error in profile update route:", err);
+      res.status(500).json({ error: "Server error" });
+    }
+  }
+);
+
+app.post("/api/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+
+    const [rows] = await pool.query(
+      `SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1`,
+      [username, username]
+    );
+
+    if (rows.length === 0) {
+      return res
+        .status(401)
+        .json({ error: "Invalid username/email or password" });
+    }
+
+    const user = rows[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res
+        .status(401)
+        .json({ error: "Invalid username/email or password" });
+    }
+
+    // Save user info in session
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      type: user.type,
+      profile_picture: user.profile_picture || null,
+    };
+
+    res.json({
+      message: "Login successful",
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      type: user.type,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: "Logout failed" });
+    }
+    res.clearCookie("user_sid");
+    res.json({ message: "Logout successful" }); // ✅ No redirect here
+  });
+});
+
 app.post("/api/signup", async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -72,69 +265,16 @@ app.post("/api/signup", async (req, res) => {
     });
   } catch (error) {
     if (error.code === "ER_DUP_ENTRY") {
-      return res.status(400).json({ error: "Username or email already exists" });
+      return res
+        .status(400)
+        .json({ error: "Username or email already exists" });
     }
     console.error(error);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-// Login route without session
-app.post("/api/login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password required" });
-    }
-
-    const [rows] = await pool.query(
-      `SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1`,
-      [username, username]
-    );
-
-    if (rows.length === 0) {
-      return res.status(401).json({ error: "Invalid username/email or password" });
-    }
-
-    const user = rows[0];
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ error: "Invalid username/email or password" });
-    }
-
-    // Save user info in session
-    req.session.user = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      type: user.type,
-    };
-
-    res.json({
-      message: "Login successful",
-      userId: user.id,
-      username: user.username,
-      email: user.email,
-      type: user.type,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-app.post("/api/logout", (req, res) => {
-  req.session.destroy(err => {
-    if (err) {
-      return res.status(500).json({ error: "Logout failed" });
-    }
-    res.clearCookie('user_sid');
-    res.json({ message: "Logout successful" }); // ✅ No redirect here
-  });
-});
-
+// Setting the session on the db  ----------------------------------------------------------
 
 app.get("/api/session", (req, res) => {
   if (req.session.user) {
@@ -143,6 +283,8 @@ app.get("/api/session", (req, res) => {
     res.json({ loggedIn: false });
   }
 });
+
+// Get & Fetch Inquiries ----------------------------------------------------------
 
 app.post("/api/add-inquiries", async (req, res) => {
   try {
@@ -160,12 +302,16 @@ app.post("/api/add-inquiries", async (req, res) => {
 
     console.log("New inquiry saved:", { name, email, inquiry });
 
-    res.status(200).json({ message: "Inquiry submitted successfully", id: result.insertId });
+    res
+      .status(200)
+      .json({ message: "Inquiry submitted successfully", id: result.insertId });
   } catch (err) {
     console.error("Error saving inquiry:", err);
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// Get & Fetch Institutions ----------------------------------------------------------
 
 app.post("/api/institutions", async (req, res) => {
   try {
@@ -221,73 +367,6 @@ app.post("/api/institutions", async (req, res) => {
   }
 });
 
-app.post("/api/admin-access", async (req, res) => {
-  try {
-    const {
-      username,
-      fullName,
-      officialEmail,
-      password,
-      confirmPassword,
-      officialTitle,
-      employeeId,
-      mobileNumber,
-      alternativeContact,
-      registeredInstitution,
-    } = req.body;
-
-    // Only check the absolutely required fields
-    if (
-      !username?.trim() ||
-      !fullName?.trim() ||
-      !officialEmail?.trim() ||
-      !password?.trim() ||
-      !confirmPassword?.trim()
-    ) {
-      return res.status(400).json({ error: "Required fields are missing" });
-    }
-
-    // Check password match
-    if (password !== confirmPassword) {
-      return res.status(400).json({ error: "Passwords do not match" });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert into users table
-    const [result] = await pool.query(
-      `INSERT INTO users 
-        (username, full_name, email, password, type, official_title, employee_id, mobile_number, alternative_contact, registered_institution) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        username,                // username
-        fullName,                // full_name
-        officialEmail,           // email
-        hashedPassword,          // password
-        1,                       // type: admin
-        officialTitle || null,   // optional
-        employeeId || null,      // optional
-        mobileNumber || null,    // optional
-        alternativeContact || null, // optional
-        registeredInstitution || null // optional
-      ]
-    );
-
-    res.status(201).json({
-      message: "Admin access registered successfully",
-      userId: result.insertId,
-    });
-  } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") {
-      return res.status(400).json({ error: "Username or email already exists" });
-    }
-    console.error(error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-
 app.get("/api/fetch_institutions", async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -302,6 +381,9 @@ app.get("/api/fetch_institutions", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// Get & Fetch Services ----------------------------------------------------------
+
 app.post("/api/services", async (req, res) => {
   try {
     const {
@@ -348,8 +430,6 @@ app.post("/api/services", async (req, res) => {
   }
 });
 
-
-
 app.get("/api/fetch_services", async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -373,6 +453,285 @@ app.get("/api/fetch_services", async (req, res) => {
   }
 });
 
+// Get & Fetch Users ----------------------------------------------------------
+
+app.post("/api/admin-access", async (req, res) => {
+  try {
+    const {
+      username,
+      fullName,
+      officialEmail,
+      password,
+      confirmPassword,
+      officialTitle,
+      employeeId,
+      mobileNumber,
+      alternativeContact,
+      registeredInstitution,
+    } = req.body;
+
+    // Only check the absolutely required fields
+    if (
+      !username?.trim() ||
+      !fullName?.trim() ||
+      !officialEmail?.trim() ||
+      !password?.trim() ||
+      !confirmPassword?.trim()
+    ) {
+      return res.status(400).json({ error: "Required fields are missing" });
+    }
+
+    // Check password match
+    if (password !== confirmPassword) {
+      return res.status(400).json({ error: "Passwords do not match" });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Insert into users table
+    const [result] = await pool.query(
+      `INSERT INTO users 
+        (username, full_name, email, password, type, official_title, employee_id, mobile_number, alternative_contact, registered_institution) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        username, // username
+        fullName, // full_name
+        officialEmail, // email
+        hashedPassword, // password
+        1, // type: admin
+        officialTitle || null, // optional
+        employeeId || null, // optional
+        mobileNumber || null, // optional
+        alternativeContact || null, // optional
+        registeredInstitution || null, // optional
+      ]
+    );
+
+    res.status(201).json({
+      message: "Admin access registered successfully",
+      userId: result.insertId,
+    });
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res
+        .status(400)
+        .json({ error: "Username or email already exists" });
+    }
+    console.error(error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/fetch_users", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT 
+         u.id,
+         u.full_name,
+         u.username as username,
+         u.email,
+         u.mobile_number AS phone,
+         u.type AS role,
+         u.official_title,
+         u.employee_id,
+         u.alternative_contact,
+         u.registered_institution,
+         i.office_name AS institution_name
+       FROM users u
+       LEFT JOIN institutions i ON u.registered_institution = i.id
+       ORDER BY u.id DESC`
+    );
+
+    res.json({ users: rows });
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// Get & Fetch Events ----------------------------------------------------------
+
+app.post("/api/events", async (req, res) => {
+  const {
+    event_name,
+    event_type,
+    event_description,
+    event_date,
+    start_time,
+    end_time,
+    max_participants,
+  } = req.body;
+
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO events 
+      (event_name, event_type, event_description, event_date, start_time, end_time, max_participants) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        event_name,
+        event_type,
+        event_description,
+        event_date,
+        start_time,
+        end_time,
+        max_participants,
+      ]
+    );
+
+    res
+      .status(200)
+      .json({ message: "Event added successfully", eventId: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to add event" });
+  }
+});
+
+app.get("/api/fetch_events", async (req, res) => {
+  try {
+    const [events] = await pool.query(
+      `SELECT 
+          id, 
+          event_name, 
+          event_type, 
+          event_description, 
+          event_date, 
+          start_time, 
+          end_time, 
+          max_participants
+       FROM events
+       ORDER BY event_date DESC, start_time ASC`
+    );
+
+    res.status(200).json({ events });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+});
+
+
+// Get & Fetch Bookings ----------------------------------------------------------
+
+
+// POST /api/add-booking
+app.post("/api/add-booking", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ error: "Not logged in" });
+
+    const { type, item_id, booking_date } = req.body;
+    const user_id = req.session.user.id;
+
+    if (!type || !["event", "service"].includes(type))
+      return res.status(400).json({ error: "Invalid booking type" });
+
+    if (!item_id || !booking_date)
+      return res.status(400).json({ error: "Item and date are required" });
+
+    // Fetch event/service details
+    let [itemRows] = [];
+    if (type === "event") {
+      [itemRows] = await pool.query("SELECT * FROM events WHERE id = ?", [item_id]);
+    } else {
+      [itemRows] = await pool.query("SELECT * FROM services WHERE id = ?", [item_id]);
+    }
+
+    if (!itemRows.length) return res.status(404).json({ error: "Item not found" });
+
+    const item = itemRows[0];
+
+    // Check date & slot availability
+    if (type === "event") {
+      if (booking_date !== item.event_date)
+        return res.status(400).json({ error: "Booking date must match event date" });
+
+      const [[{ count }]] = await pool.query(
+        "SELECT COUNT(*) AS count FROM bookings WHERE type=? AND item_id=? AND booking_date=?",
+        [type, item_id, booking_date]
+      );
+
+      if (count >= item.max_participants)
+        return res.status(400).json({ error: "Selected slot is full" });
+    } else {
+      // service
+      const bookingDay = new Date(booking_date).toLocaleDateString("en-US", { weekday: "long" });
+
+      if (!item.days_of_week.split(",").includes(bookingDay))
+        return res.status(400).json({ error: `Service not available on ${bookingDay}` });
+
+      const [[{ count }]] = await pool.query(
+        "SELECT COUNT(*) AS count FROM bookings WHERE type=? AND item_id=? AND booking_date=?",
+        [type, item_id, booking_date]
+      );
+
+      if (count >= item.daily_capacity)
+        return res.status(400).json({ error: "Selected slot is full" });
+    }
+
+    // Add booking
+    const [result] = await pool.query(
+      "INSERT INTO bookings (user_id, type, item_id, booking_date) VALUES (?, ?, ?, ?)",
+      [user_id, type, item_id, booking_date]
+    );
+
+    return res.json({
+      success: true,
+      booking_number: result.insertId,
+      message: "Booking confirmed",
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/fetch-bookings
+app.get("/api/fetch-bookings", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ error: "Not logged in" });
+
+    const user_id = req.session.user.id;
+
+    const [rows] = await pool.query(
+      `SELECT 
+          b.id AS booking_number,
+          b.type, 
+          CASE WHEN b.type='event' THEN e.event_name ELSE s.service_name END AS item_name,
+          b.booking_date, 
+          b.created_at
+       FROM bookings b
+       LEFT JOIN events e ON b.item_id = e.id AND b.type='event'
+       LEFT JOIN services s ON b.item_id = s.id AND b.type='service'
+       WHERE b.user_id=? 
+       ORDER BY b.created_at DESC`,
+      [user_id]
+    );
+
+    res.json({ bookings: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+app.get("/api/bookings-count", async (req, res) => {
+  try {
+    if (!req.session.user) return res.status(401).json({ error: "Not logged in" });
+
+    const user_id = req.session.user.id;
+    const [rows] = await pool.query(
+      "SELECT COUNT(*) AS count FROM bookings WHERE user_id = ?",
+      [user_id]
+    );
+
+    res.json({ count: rows[0].count });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 
 app.listen(5000, () => console.log("Server running on port 5000"));

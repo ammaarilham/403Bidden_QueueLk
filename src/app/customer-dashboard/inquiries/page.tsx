@@ -54,8 +54,8 @@ const Page = () => {
         message="You will receive an SMS with the details..."
         showButton={true}
         buttonText="Go to Inquiries"
-        buttonHref="/inquiries"
-        redirectUrl="/inquiries"
+        buttonHref="/customer-dashboard/inquiries"
+        redirectUrl="/customer-dashboard/inquiries"
         redirectDelay={1500}
       />
     );

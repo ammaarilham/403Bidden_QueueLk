@@ -42,7 +42,7 @@ const SuccessRedirectPage: React.FC<SuccessRedirectPageProps> = ({
         className="w-38 cursor-pointer rounded-xl"
       />
 
-      <h2 className="mb-4 mt-10 text-2xl font-bold">{title}</h2>
+      <h2 className="mb-4 mt-10 text-center text-2xl font-bold">{title}</h2>
       <p className="text-lg text-gray-800">{message}</p>
       {redirectUrl && (
         <p className="text-sm text-gray-500">

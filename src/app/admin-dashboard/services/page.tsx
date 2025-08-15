@@ -224,7 +224,7 @@ const Page = () => {
           <label className="mb-2 block text-sm font-medium text-gray-700">
             Days of the Week
           </label>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col gap-3">
             {[
               "Monday",
               "Tuesday",
@@ -287,19 +287,21 @@ const Page = () => {
                 )}
 
                 {/* Meta Info */}
-                <div className="mt-3 flex flex-wrap gap-6 text-sm text-gray-600">
+                <div className="my-5 flex justify-between gap-6 text-sm text-gray-600">
                   {service.appointment_duration && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 rounded-lg bg-yellow-200 p-2">
                       <AiOutlineClockCircle className="text-gray-500" />
                       {service.appointment_duration} min
                     </span>
                   )}
                   {service.daily_capacity && (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 rounded-lg bg-green-200 p-2">
                       <AiOutlineTeam className="text-gray-500" />
                       {service.daily_capacity} per day
                     </span>
                   )}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-6 text-sm text-gray-600">
                   {service.days_of_week && (
                     <span className="flex items-center gap-1">
                       <AiOutlineCalendar className="text-gray-500" />

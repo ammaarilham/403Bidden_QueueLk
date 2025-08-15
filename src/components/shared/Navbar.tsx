@@ -34,11 +34,14 @@ const Navbar: React.FC = () => {
         if (!data.loggedIn) {
           router.replace("/login");
         } else {
+          // Use uploaded profile picture if exists, otherwise default
+          const profilePicUrl = data.user.profile_picture
+            ? `/assets/images/profile_pictures/${data.user.profile_picture}`
+            : "/assets/images/common/default-profile.png";
+
           setUser({
             username: data.user.username,
-            profilePicUrl:
-              data.user.profilePicUrl ||
-              "/assets/images/common/default-profile.png",
+            profilePicUrl,
             type: data.user.type,
           });
         }
@@ -119,7 +122,9 @@ const Navbar: React.FC = () => {
         <div
           onClick={() =>
             router.push(
-              user.type === 1 ? "/admin-dashboard" : "/customer-dashboard"
+              user.type === 1
+                ? "/admin-dashboard/profile"
+                : "/customer-dashboard/profile"
             )
           }
           className="flex cursor-pointer items-center space-x-3"
@@ -127,10 +132,12 @@ const Navbar: React.FC = () => {
           <img
             src={user.profilePicUrl}
             alt="Profile"
-            className="h-10 w-10 rounded-full object-cover"
+            className="h-12 w-12 rounded-full object-cover"
           />
           <div className="flex flex-col leading-tight">
-            <span className="font-semibold text-gray-800">{user.username}</span>
+            <span className="text-lg font-semibold text-gray-800">
+              {user.username}
+            </span>
             <span className="text-xs text-gray-500">{userTypeLabel}</span>
           </div>
         </div>
