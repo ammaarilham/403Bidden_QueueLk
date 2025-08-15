@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { AiOutlineArrowLeft, AiOutlineArrowRight } from "react-icons/ai";
 import { AiOutlineClockCircle } from "react-icons/ai";
 
-const page = () => {
+const Page = () => {
   return (
     <>
       {/* <Navbar /> */}
@@ -65,4 +65,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

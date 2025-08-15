@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { FaGoogle, FaApple, FaFacebookF } from "react-icons/fa";
 import Swal from "sweetalert2";
 
-const page = () => {
+const Page = () => {
   const [conditionsSelected, setConditionsSelected] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -218,4 +218,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;

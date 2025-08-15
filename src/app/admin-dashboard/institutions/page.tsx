@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
 
-const page = () => {
+const Page = () => {
   const [workingDays, setWorkingDays] = useState<string[]>([]);
   const [success, setSuccess] = useState(false);
 
@@ -249,4 +249,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
