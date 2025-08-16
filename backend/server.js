@@ -86,7 +86,7 @@ const storage = multer.diskStorage({
     if (file.fieldname === "profile_picture") {
       uploadPath = path.join(
         __dirname,
-        "../public/assets/images/profile_picture"
+        "../public/assets/images/profile_pictures"
       );
     } else {
       uploadPath = path.join(
@@ -834,42 +834,57 @@ app.get("/api/fetch-bookings", async (req, res) => {
 
     const user_id = req.session.user.id;
 
-    // Use MySQL user variables to generate slot numbers
+    // Fetch bookings
     const [rows] = await pool.query(
       `SELECT 
-          booking_number,
-          type,
-          item_name,
-          booking_date,
-          created_at,
-          slot_id
-       FROM (
-         SELECT 
-           b.id AS booking_number,
-           b.type,
-           CASE WHEN b.type='event' THEN e.event_name ELSE s.service_name END AS item_name,
-           b.booking_date,
-           b.created_at,
-           @slot := IF(@prev_item = b.item_id AND @prev_date = b.booking_date, @slot + 1, 1) AS slot_id,
-           @prev_item := b.item_id,
-           @prev_date := b.booking_date
-         FROM bookings b
-         LEFT JOIN events e ON b.item_id = e.id AND b.type='event'
-         LEFT JOIN services s ON b.item_id = s.id AND b.type='service'
-         CROSS JOIN (SELECT @slot := 0, @prev_item := 0, @prev_date := '') AS vars
-         WHERE b.user_id = ?
-         ORDER BY b.booking_date ASC, b.created_at ASC
-       ) AS t`,
+          b.id AS booking_number,
+          b.type,
+          b.item_id,
+          b.booking_date,
+          b.created_at,
+          CASE 
+            WHEN b.type='event' THEN e.event_name
+            ELSE s.service_name
+          END AS item_name,
+          CASE 
+            WHEN b.type='event' THEN e.daily_capacity
+            ELSE s.daily_capacity
+          END AS total_capacity
+       FROM bookings b
+       LEFT JOIN events e ON b.item_id = e.id AND b.type='event'
+       LEFT JOIN services s ON b.item_id = s.id AND b.type='service'
+       WHERE b.user_id=?
+       ORDER BY b.booking_date, b.created_at ASC`,
       [user_id]
     );
 
-    res.json({ bookings: rows });
+    // Calculate slot_id for each booking
+    const bookingsWithSlot = await Promise.all(
+      rows.map(async (b) => {
+        const [countResult] = await pool.query(
+          `SELECT COUNT(*) AS booked_count 
+           FROM bookings 
+           WHERE item_id = ? AND booking_date = ? AND type = ? AND id <= ?`,
+          [b.item_id, b.booking_date, b.type, b.booking_number]
+        );
+        const slot_id = countResult[0].booked_count; // Slot number
+        return {
+          booking_number: b.booking_number,
+          slot_id,
+          type: b.type,
+          item_name: b.item_name,
+          booking_date: b.booking_date,
+          created_at: b.created_at,
+        };
+      })
+    );
+
+    res.json({ bookings: bookingsWithSlot });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 
 app.get("/api/bookings-count", async (req, res) => {

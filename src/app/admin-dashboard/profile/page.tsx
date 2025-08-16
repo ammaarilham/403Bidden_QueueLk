@@ -122,10 +122,6 @@ const Page = () => {
       }
     });
 
-    if (profile_picture) {
-      formData.append("profile_picture", profile_picture);
-    }
-
     try {
       const res = await fetch("http://localhost:5000/api/profile/update", {
         method: "POST",
