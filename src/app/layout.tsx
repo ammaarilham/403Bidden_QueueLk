@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,9 +28,10 @@ export default function RootLayout({
           inter.className
         )}
       >
-        <main className="sm:border-input relative mx-auto flex min-h-screen max-w-sm flex-col sm:border-x px-5">
+        <main className="sm:border-input relative mx-auto flex min-h-screen max-w-sm flex-col px-5 sm:border-x">
           <div className="flex-1 flex-grow">{children}</div>
         </main>
+        <Toaster />
       </body>
     </html>
   );

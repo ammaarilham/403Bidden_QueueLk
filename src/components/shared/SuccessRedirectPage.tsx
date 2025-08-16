@@ -1,7 +1,10 @@
 "use client";
-import React, { useEffect } from "react";
-import { motion } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import React, { useEffect } from "react";
+import { Button } from "../ui/button";
+import { ArrowRight } from "lucide-react";
 
 interface SuccessRedirectPageProps {
   title: string; // h2 text
@@ -35,28 +38,29 @@ const SuccessRedirectPage: React.FC<SuccessRedirectPageProps> = ({
   }, [redirectUrl, redirectDelay, router]);
 
   return (
-    <div className="flex h-screen w-full flex-col items-center justify-center px-4">
-      <motion.img
-        src="/assets/images/login/login-q-logo.png"
-        alt="Logo"
-        className="w-38 cursor-pointer rounded-xl"
+    <div className="flex h-dvh w-full flex-col items-center justify-center gap-0">
+      <Image
+        height={80}
+        width={95}
+        src="/assets/branding/icon.svg"
+        alt="Queue.lk logo"
+        className="mb-4 size-24 cursor-pointer"
       />
 
-      <h2 className="mb-4 mt-10 text-center text-2xl font-bold">{title}</h2>
-      <p className="text-lg text-gray-800">{message}</p>
-      {redirectUrl && (
-        <p className="text-sm text-gray-500">
+      <h3 className="text-center text-2xl font-bold">{title}</h3>
+      <p className="text-muted-foreground mt-2">{message}</p>
+      {/* {redirectUrl && (
+        <small className="text-sm text-gray-500">
           You will be redirected in {redirectDelay / 1000}s...
-        </p>
-      )}
+        </small>
+      )} */}
 
       {showButton && (
-        <a
-          href={buttonHref}
-          className="bg-primary hover:bg-primary-dark mt-12 w-full rounded-md py-3 text-center font-semibold transition"
-        >
-          {buttonText}
-        </a>
+        <Button asChild className="mt-6">
+          <Link href={buttonHref}>
+            {buttonText} <ArrowRight />
+          </Link>
+        </Button>
       )}
     </div>
   );

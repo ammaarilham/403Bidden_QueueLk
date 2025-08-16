@@ -1,8 +1,35 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Navbar from "@/components/shared/Navbar";
-import Swal from "sweetalert2";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { format } from "date-fns";
+import {
+  Calendar as CalendarIcon,
+  ChevronDown,
+  ClockAlert,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
 
 interface Booking {
@@ -13,10 +40,18 @@ interface Booking {
   created_at: string;
 }
 
-const Page = () => {
-  const [activeTab, setActiveTab] = useState<"event" | "service">("event");
-  const [success, setSuccess] = useState(false);
+const formSchema = z.object({
+  item_id: z.string().min(1, { message: "Please select an option" }),
+  booking_date: z.date().refine((date) => date instanceof Date, {
+    message: "Please select a valid booking date",
+  }),
+});
 
+type FormValues = z.infer<typeof formSchema>;
+
+const Page = () => {
+  const [activeTab, setActiveTab] = useState<"event" | "service">("service");
+  const [success, setSuccess] = useState(false);
   const [events, setEvents] = useState<{ id: number; event_name: string }[]>(
     []
   );
@@ -24,6 +59,17 @@ const Page = () => {
     { id: number; service_name: string }[]
   >([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+
+  // Custom select states
+  const [isSelectOpen, setIsSelectOpen] = useState(false);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      item_id: "",
+      booking_date: undefined,
+    },
+  });
 
   useEffect(() => {
     // Fetch events
@@ -47,30 +93,14 @@ const Page = () => {
       .catch((err) => console.error(err));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-
-    const bookingData =
-      activeTab === "event"
-        ? {
-            type: "event",
-            item_id: (form.elements.namedItem("event") as HTMLSelectElement)
-              .value,
-            booking_date: (
-              form.elements.namedItem("booking_date") as HTMLInputElement
-            ).value,
-          }
-        : {
-            type: "service",
-            item_id: (form.elements.namedItem("service") as HTMLSelectElement)
-              .value,
-            booking_date: (
-              form.elements.namedItem("booking_date") as HTMLInputElement
-            ).value,
-          };
-
+  const onSubmit = async (values: FormValues) => {
     try {
+      const bookingData = {
+        type: activeTab,
+        item_id: values.item_id,
+        booking_date: format(values.booking_date, "yyyy-MM-dd"),
+      };
+
       const res = await fetch("http://localhost:5000/api/add-booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,20 +110,18 @@ const Page = () => {
 
       const data = await res.json();
       if (res.ok) {
+        toast("Booking submitted successfully!", {
+          description: "You will receive a confirmation soon.",
+        });
         setSuccess(true);
       } else {
-        Swal.fire({
-          icon: "error",
-          title: "Booking failed",
-          text: data.error || "Something went wrong.",
+        toast("Booking failed", {
+          description: data.error || "Something went wrong.",
         });
       }
     } catch (err) {
-      console.error(err);
-      Swal.fire({
-        icon: "error",
-        title: "Booking failed",
-        text: "A network error occurred. Please try again.",
+      toast("Booking failed", {
+        description: "A network error occurred. Please try again.",
       });
     }
   };
@@ -112,162 +140,289 @@ const Page = () => {
     );
   }
 
-  // Filter bookings based on active tab
   const filteredBookings = bookings.filter((b) => b.type === activeTab);
+  const currentItems = activeTab === "service" ? services : events;
 
-  return (
-    <>
-      <Navbar />
-      <div className="flex min-h-screen w-full flex-col gap-6 px-4 pt-20">
-        {/* Tabs */}
-        <div className="flex w-full gap-2 rounded-full bg-gray-100 p-1 shadow-inner">
-          <button
-            onClick={() => setActiveTab("event")}
-            className={`flex-1 rounded-full py-2 text-center font-semibold transition-all duration-300 ${
-              activeTab === "event"
-                ? "bg-primary text-white shadow-md"
-                : "text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            Event
-          </button>
-          <button
-            onClick={() => setActiveTab("service")}
-            className={`flex-1 rounded-full py-2 text-center font-semibold transition-all duration-300 ${
-              activeTab === "service"
-                ? "bg-primary text-white shadow-md"
-                : "text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            Service
-          </button>
-        </div>
+  const CustomSelect = ({ field, items, placeholder }: any) => {
+    const selectedItemData = items.find(
+      (item: any) => item.id.toString() === field.value
+    );
+    const selectedLabel = selectedItemData
+      ? activeTab === "service"
+        ? selectedItemData.service_name
+        : selectedItemData.event_name
+      : placeholder;
 
-        {/* Booking Form */}
-        <div className="w-full max-w-md rounded-xl bg-white">
-          <h2 className="mb-6 text-2xl font-bold capitalize">
-            {activeTab} Booking
-          </h2>
-          <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-            {activeTab === "event" ? (
-              <div>
-                <label
-                  htmlFor="event"
-                  className="mb-2 block text-sm font-medium text-gray-700"
-                >
-                  Select Event
-                </label>
-                <select
-                  id="event"
-                  name="event"
-                  className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-                  required
-                >
-                  <option value="">-- Select Event --</option>
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.event_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label
-                  htmlFor="service"
-                  className="mb-2 block text-sm font-medium text-gray-700"
-                >
-                  Select Service
-                </label>
-                <select
-                  id="service"
-                  name="service"
-                  className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-                  required
-                >
-                  <option value="">-- Select Service --</option>
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.service_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div>
-              <label
-                htmlFor="booking_date"
-                className="mb-2 block text-sm font-medium text-gray-700"
-              >
-                Booking Date
-              </label>
-              <input
-                id="booking_date"
-                name="booking_date"
-                type="date"
-                className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-                required
-              />
-            </div>
-
-            <div className="flex w-full gap-2">
-              <button
-                type="submit"
-                className="bg-primary hover:bg-primary-dark w-full rounded-md py-3 font-semibold transition"
-              >
-                Confirm
-              </button>
-              <button
-                type="button"
-                className="hover:bg-primary-dark w-full rounded-md bg-gray-200 py-3 font-semibold transition"
-                onClick={(e) => {
-                  const form = e.currentTarget.closest(
-                    "form"
-                  ) as HTMLFormElement;
-                  form.reset();
+    return (
+      <div className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "w-full justify-between",
+            !field.value && "text-muted-foreground"
+          )}
+          onClick={() => setIsSelectOpen(!isSelectOpen)}
+        >
+          {selectedLabel}
+          <ChevronDown className="h-4 w-4 opacity-50" />
+        </Button>
+        {isSelectOpen && (
+          <div className="bg-background absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border shadow-md">
+            {items.map((item: any) => (
+              <div
+                key={item.id}
+                className="hover:bg-muted cursor-pointer px-3 py-2 transition-colors"
+                onClick={() => {
+                  field.onChange(item.id.toString());
+                  setIsSelectOpen(false);
                 }}
               >
-                Cancel
-              </button>
-            </div>
-          </form>
+                <small className="">
+                  {activeTab === "service"
+                    ? item.service_name
+                    : item.event_name}
+                </small>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex min-h-dvh w-full flex-col items-center gap-10 py-20 pt-24">
+      {/* Booking Form Section */}
+      <div className="mx-auto w-full max-w-2xl">
+        <div className="mb-6">
+          <h3>Book an Appointment</h3>
+          <small className="text-muted-foreground mt-2">
+            Select whether you want to book a service or event
+          </small>
         </div>
 
-        <div className="mt-4 w-full max-w-md rounded-xl bg-white">
-          <h2 className="mb-4 text-2xl font-bold capitalize">
-            Previous {activeTab}s
-          </h2>
-          {filteredBookings.length === 0 ? (
-            <p className="text-gray-500">
-              No previous {activeTab} bookings found.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-4">
-              {filteredBookings.map((b) => (
-                <li
-                  key={b.booking_number}
-                  className="flex justify-between rounded-lg border border-gray-200 p-4 transition hover:shadow-lg"
-                >
-                  <div className="flex flex-col gap-1">
-                    <span className="mb-2 inline-block w-fit rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
-                      Booking #: {b.booking_number}
-                    </span>
-                    <p className="font-semibold text-gray-800">{b.item_name}</p>
-                    <p className="text-sm text-gray-500">
-                      Booking Date: {b.booking_date}
-                    </p>
-                  </div>
-                  <p className="text-sm text-gray-400">
-                    {new Date(b.created_at).toLocaleDateString()}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <Tabs
+          defaultValue="service"
+          value={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value as "event" | "service");
+            form.reset();
+            setIsSelectOpen(false);
+          }}
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="service">Service Booking</TabsTrigger>
+            <TabsTrigger value="event">Event Booking</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="service" className="mt-6">
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
+                <FormField
+                  control={form.control}
+                  name="item_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Service</FormLabel>
+                      <FormControl>
+                        <CustomSelect
+                          field={field}
+                          items={services}
+                          placeholder="Choose a service"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="booking_date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Booking Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex gap-3">
+                  <Button type="submit" className="flex-1">
+                    Confirm Booking
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => form.reset()}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </TabsContent>
+
+          <TabsContent value="event" className="mt-6">
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
+                <FormField
+                  control={form.control}
+                  name="item_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Event</FormLabel>
+                      <FormControl>
+                        <CustomSelect
+                          field={field}
+                          items={events}
+                          placeholder="Choose an event"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="booking_date"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Booking Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date() || date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex gap-3">
+                  <Button type="submit" className="flex-1">
+                    Confirm Booking
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => form.reset()}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </TabsContent>
+        </Tabs>
       </div>
-    </>
+
+      {/* Previous Bookings Section */}
+      <div className="w-full">
+        <div className="mb-6">
+          <h3>Previous {activeTab} Bookings</h3>
+          <small className="text-muted-foreground mt-2">
+            Your booking history for {activeTab}s
+          </small>
+        </div>
+
+        {filteredBookings.length === 0 ? (
+          <p className="text-muted-foreground py-8 text-center">
+            No previous {activeTab} bookings found.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {filteredBookings.map((booking) => (
+              <div key={booking.booking_number}>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <span className="bg-primary/25 text-primary-foreground mb-2 w-fit rounded-full px-2.5 py-0.5 text-xs font-medium">
+                      Booking #{booking.booking_number}
+                    </span>
+                    <h4>{booking.item_name}</h4>
+                    <small className="text-muted-foreground">
+                      {new Date(booking.booking_date).toLocaleString("en-US", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </small>
+                  </div>
+                  <ClockAlert className="text-muted-foreground" />
+                </div>
+                <hr className="my-5" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
