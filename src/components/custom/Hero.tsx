@@ -1,10 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { ArrowRight, Settings, Users } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { SvgButton } from "../ui/svg-button";
 import Link from "next/link";
@@ -29,10 +29,49 @@ const steps = [
   },
 ];
 
+const logoVariants: Variants = {
+  initial: {
+    scale: 0.9,
+    opacity: 0,
+  },
+  animate: {
+    scale: 1,
+    opacity: 1,
+    transition: {
+      duration: 0.4,
+      ease: "easeOut",
+    },
+  },
+};
+
+const textVariants: Variants = {
+  initial: {
+    y: 10,
+    opacity: 0,
+  },
+  animate: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      delay: 0.5,
+      duration: 0.4,
+      ease: "easeOut",
+    },
+  },
+};
+
 const Hero = () => {
+  const [showLogoIntro, setShowLogoIntro] = useState(true);
   const [stepIndex, setStepIndex] = useState(0);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowLogoIntro(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleNext = () => {
     if (stepIndex < steps.length - 1) {
@@ -46,6 +85,40 @@ const Hero = () => {
     router.push(`/login?role=${role}`);
   };
 
+  if (showLogoIntro) {
+    return (
+      <div className="flex h-dvh w-full items-center justify-center px-4">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <motion.div
+            className="select-none"
+            variants={logoVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <div className="flex w-full items-center justify-center">
+              <Image
+                width={220}
+                height={220}
+                src="/assets/branding/submark-logo.svg"
+                alt="queue.lk logo"
+                className=""
+              />
+            </div>
+          </motion.div>
+          <motion.small
+            variants={textVariants}
+            initial="initial"
+            animate="animate"
+            className="text-lg font-medium"
+          >
+            Effortless Booking, No More Waiting
+          </motion.small>
+        </div>
+      </div>
+    );
+  }
+
+  // Main content after logo intro
   return (
     <div className="flex h-dvh w-full items-center justify-center px-4">
       {showRoleSelection ? (
@@ -86,7 +159,6 @@ const Hero = () => {
               />
             </Link>
           </div>
-
           <div className="flex flex-col items-center justify-center px-8 text-center">
             <div className="">
               <h3 className="mb-1">{steps[stepIndex].title}</h3>
@@ -110,7 +182,6 @@ const Hero = () => {
               />
             </motion.div>
           </div>
-
           <Button onClick={handleNext}>
             {stepIndex === steps.length - 1 ? "Get Started" : "Next"}
             <ArrowRight />
