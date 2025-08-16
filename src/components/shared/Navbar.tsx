@@ -120,7 +120,7 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="bg-background fixed left-0 right-0 top-0 z-50 mx-auto flex max-w-sm items-center justify-between border-x px-4 pb-4 pt-20">
+      <nav className="bg-background fixed left-0 right-0 top-0 z-50 mx-auto flex max-w-sm items-center justify-between border-x px-4 pb-4 pt-10">
         <div
           onClick={() =>
             router.push(

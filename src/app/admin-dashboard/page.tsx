@@ -1,15 +1,19 @@
 "use client";
 
 import { ChartLineDefault } from "@/components/custom/chart-line-default";
-import { Button } from "@/components/ui/button";
 import { SvgButton } from "@/components/ui/svg-button";
-import { Settings, ToolCase, Users } from "lucide-react";
-import Link from "next/link";
+import {
+  Server,
+  Settings,
+  UserCheck2Icon,
+  Users,
+  Wrench
+} from "lucide-react";
 
 const Page = () => {
   return (
     <>
-      <div className="flex min-h-dvh w-full flex-col items-center py-20">
+      <div className="items- flex min-h-dvh w-full flex-col gap-10 py-20">
         <div className="grid w-full grid-cols-2 gap-2">
           <SvgButton
             href="/admin-dashboard/services"
@@ -26,18 +30,26 @@ const Page = () => {
             Add Event
           </SvgButton>
           <SvgButton
+            href="/admin-dashboard/users"
+            icon={UserCheck2Icon}
+            className="col-span-1 h-40"
+          >
+            Manage Users
+          </SvgButton>
+          <SvgButton
+            href="/admin-dashboard/institutions"
+            icon={Server}
+            className="col-span-1 h-40"
+          >
+            Add Institution{" "}
+          </SvgButton>
+          <SvgButton
             href="/inquiries"
-            icon={ToolCase}
+            icon={Wrench}
             className="col-span-2 h-40"
           >
-            Support
+            Support & Inquiries
           </SvgButton>
-        </div>
-
-        <div className="my-5">
-          <Link href="/admin-dashboard/users">
-            <Button variant={"outline"}>Manage Users</Button>
-          </Link>
         </div>
 
         <ChartLineDefault />
