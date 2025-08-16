@@ -1,109 +1,125 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import Navbar from "@/components/shared/Navbar";
-import { TbLanguage } from "react-icons/tb";
-import { HiOutlineLogout } from "react-icons/hi";
-import { IoIosArrowForward } from "react-icons/io";
-import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
-import Swal from "sweetalert2";
-import { motion } from "framer-motion";
-import { FiEye } from "react-icons/fi"; // make sure this is at the top with your imports
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { BookOpen, Eye, QrCode } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import QRCode from "react-qr-code";
+import { toast } from "sonner";
+import * as z from "zod";
+
+import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import Image from "next/image";
+
+const formSchema = z.object({
+  full_name: z.string().min(1, "Full name is required"),
+  official_title: z.string().min(1, "Official title is required"),
+  employee_id: z.string().min(1, "Employee ID is required"),
+  official_email: z.string().email("Invalid email address"),
+  mobile_number: z.string().min(1, "Mobile number is required"),
+  alternative_contact: z.string().optional(),
+  registered_institution: z
+    .string()
+    .min(1, "Registered institution is required"),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface User {
+  username: string;
+  full_name: string;
+  official_title: string;
+  employee_id: string;
+  official_email: string;
+  mobile_number: string;
+  alternative_contact?: string;
+  registered_institution: string;
+  profile_picture?: string;
+  nic_document?: string;
+  birth_certificate_document?: string;
+  driving_license_document?: string;
+  other_document1?: string;
+  other_document2?: string;
+  other_document3?: string;
+}
 
 const Page = () => {
   const [success, setSuccess] = useState(false);
-  const [user, setUser] = useState<{
-    username: string;
-    full_name: string;
-    official_title: string;
-    employee_id: string;
-    official_email: string;
-    mobile_number: string;
-    alternative_contact?: string;
-    registered_institution: string;
-    profile_picture: string;
-    nic_document?: string;
-    birth_certificate_document?: string;
-    driving_license_document?: string;
-    other_document1?: string;
-    other_document2?: string;
-    other_document3?: string;
-  } | null>(null);
-  useEffect(() => {
-    fetch("http://localhost:5000/api/profile", { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => setUser(data.user))
-      .catch((err) => console.error("Error fetching user:", err));
-  }, []);
-
+  const [user, setUser] = useState<User | null>(null);
   const [bookingCount, setBookingCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      full_name: "",
+      official_title: "",
+      employee_id: "",
+      official_email: "",
+      mobile_number: "",
+      alternative_contact: "",
+      registered_institution: "",
+    },
+  });
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/bookings-count", {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => setBookingCount(data.count || 0))
-      .catch((err) => console.error("Error fetching booking count:", err));
-  }, []);
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    Promise.all([
+      fetch("http://localhost:5000/api/profile", { credentials: "include" }),
+      fetch("http://localhost:5000/api/bookings-count", {
+        credentials: "include",
+      }),
+    ])
+      .then(async ([profileRes, bookingRes]) => {
+        const profileData = await profileRes.json();
+        const bookingData = await bookingRes.json();
+
+        if (profileData.user) {
+          setUser(profileData.user);
+          form.reset({
+            full_name: profileData.user.full_name || "",
+            official_title: profileData.user.official_title || "",
+            employee_id: profileData.user.employee_id || "",
+            official_email: profileData.user.official_email || "",
+            mobile_number: profileData.user.mobile_number || "",
+            alternative_contact: profileData.user.alternative_contact || "",
+            registered_institution:
+              profileData.user.registered_institution || "",
+          });
+        }
+
+        setBookingCount(bookingData.count || 0);
+      })
+      .catch((err) => {
+        console.error("Error fetching data:", err);
+        toast.error("Failed to load profile data");
+      })
+      .finally(() => setLoading(false));
+  }, [form]);
+
+  const onSubmit = async (values: FormValues) => {
     if (!user) return;
-
-    const form = e.currentTarget;
-    const full_name = (form.elements.namedItem("full_name") as HTMLInputElement)
-      .value;
-    const official_title = (
-      form.elements.namedItem("official_title") as HTMLInputElement
-    ).value;
-    const employee_id = (
-      form.elements.namedItem("employee_id") as HTMLInputElement
-    ).value;
-    const official_email = (
-      form.elements.namedItem("official_email") as HTMLInputElement
-    ).value;
-    const mobile_number = (
-      form.elements.namedItem("mobile_number") as HTMLInputElement
-    ).value;
-    const alternative_contact = (
-      form.elements.namedItem("alternative_contact") as HTMLInputElement
-    ).value;
-    const registered_institution = (
-      form.elements.namedItem("registered_institution") as HTMLInputElement
-    ).value;
-    const profile_picture = (
-      form.elements.namedItem("profile_picture") as HTMLInputElement
-    ).files?.[0];
-
-    const nic_document = (
-      form.elements.namedItem("nic_document") as HTMLInputElement
-    ).files?.[0];
-    const birth_certificate_document = (
-      form.elements.namedItem("birth_certificate_document") as HTMLInputElement
-    ).files?.[0];
-    const driving_license_document = (
-      form.elements.namedItem("driving_license_document") as HTMLInputElement
-    ).files?.[0];
-    const other_document1 = (
-      form.elements.namedItem("other_document1") as HTMLInputElement
-    ).files?.[0];
-    const other_document2 = (
-      form.elements.namedItem("other_document2") as HTMLInputElement
-    ).files?.[0];
-    const other_document3 = (
-      form.elements.namedItem("other_document3") as HTMLInputElement
-    ).files?.[0];
+    setIsSubmitting(true);
 
     const formData = new FormData();
-    formData.append("full_name", full_name);
-    formData.append("official_title", official_title);
-    formData.append("employee_id", employee_id);
-    formData.append("official_email", official_email);
-    formData.append("mobile_number", mobile_number);
-    formData.append("alternative_contact", alternative_contact || "");
-    formData.append("registered_institution", registered_institution);
 
-    // File fields (append only if selected)
+    // Add form values
+    Object.entries(values).forEach(([key, value]) => {
+      formData.append(key, value || "");
+    });
+
+    // Handle file uploads
     const fileFields = [
       "profile_picture",
       "nic_document",
@@ -115,10 +131,12 @@ const Page = () => {
     ];
 
     fileFields.forEach((field) => {
-      const file = (form.elements.namedItem(field) as HTMLInputElement)
-        ?.files?.[0];
-      if (file) {
-        formData.append(field, file);
+      const input = document.querySelector(
+        `input[name="${field}"]`
+      ) as HTMLInputElement;
+
+      if (input?.files?.[0]) {
+        formData.append(field, input.files[0]);
       }
     });
 
@@ -130,26 +148,45 @@ const Page = () => {
       });
 
       const data = await res.json();
+
       if (res.ok) {
+        toast.success("Profile updated successfully!", {
+          description: "Your profile information has been saved.",
+        });
         setSuccess(true);
       } else {
-        Swal.fire({
-          icon: "error",
-          title: "Failed",
-          text: data.error || "Something went wrong.",
+        toast.error("Update failed", {
+          description: data.error || "Something went wrong.",
         });
       }
     } catch (err) {
       console.error(err);
-      Swal.fire({
-        icon: "error",
-        title: "Network Error",
-        text: "Please try again later.",
+      toast.error("Network error", {
+        description: "Please check your connection and try again.",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (!user) return <p>Loading...</p>;
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="text-center">
+          <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <p className="text-muted-foreground">Failed to load profile data</p>
+      </div>
+    );
+  }
 
   if (success) {
     return (
@@ -165,265 +202,312 @@ const Page = () => {
     );
   }
 
-  return (
-    <>
-      {/* <Navbar /> */}
-      <div className="flex min-h-screen w-full flex-col items-center gap-10 px-4 py-20">
-        <div className="w-full max-w-md rounded-xl">
-          {/* Title */}
-          <h2 className="mb-8 text-2xl font-bold text-gray-900">
-            Account Details
-          </h2>
+  const documentFields = [
+    { name: "nic_document", label: "NIC Document" },
+    { name: "birth_certificate_document", label: "Birth Certificate" },
+    { name: "driving_license_document", label: "Driving License" },
+    { name: "other_document1", label: "Other Document 1" },
+    { name: "other_document2", label: "Other Document 2" },
+    { name: "other_document3", label: "Other Document 3" },
+  ];
 
-          {/* Stats */}
-          <div className="flex divide-x divide-gray-300 overflow-hidden rounded-lg">
-            <div className="flex-1 p-2 text-center">
-              <div className="text-center">
-                <p className="font-sm mb-2 text-gray-700">
-                  Scan QR to view all your documents:
-                </p>
-                <div className="inline-block rounded-lg bg-white shadow-md">
-                  <QRCode
-                    value={`http://localhost:3000/customer-dashboard/documents`}
-                    size={140}
-                    level="H"
-                  />
-                </div>
-              </div>
+  return (
+    <div className="flex min-h-dvh w-full flex-col items-center gap-10 py-20 pt-24">
+      {/* Header Stats */}
+      <div className="mx-auto w-full max-w-2xl">
+        <div className="mb-6">
+          <h3>Account Details</h3>
+          <small className="text-muted-foreground mt-2">
+            Manage your profile and documents
+          </small>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="flex flex-col gap-2 rounded-lg border px-2 py-3 text-center">
+            <div className="border-input mx-auto mb-1.5 flex aspect-square size-[136px] items-center justify-center rounded-lg border">
+              <QRCode
+                value="http://localhost:3000/customer-dashboard/documents"
+                size={120}
+                level="H"
+              />
             </div>
-            <div className="flex-1 p-2 text-center">
-              <h2 className="text-2xl font-bold text-gray-800">
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-2">
+                <QrCode className="h-4 w-4" />
+                <span className="text-sm font-medium">QR Documents</span>
+              </div>
+              <small className="text-muted-foreground text-xs">
+                Scan to view all documents
+              </small>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 rounded-lg border px-2 py-3 text-center">
+            <div className="mx-auto mb-1.5">
+              <h1 className="border-primary/15 text-primary-foreground bg-primary/10 flex aspect-square size-[136px] items-center justify-center rounded-lg border">
                 {bookingCount}
-              </h2>
-              <p className="text-primary mt-1 text-sm font-medium">Bookings</p>
+              </h1>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center justify-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                <span className="text-sm font-medium">Bookings</span>
+              </div>
+              <small className="text-muted-foreground text-xs">
+                Summary of your booking history
+              </small>
             </div>
           </div>
         </div>
-        {/* <h2 className="mb-2 text-2xl font-bold flex">Update Profile</h2> */}
 
-        <form
-          className="flex flex-col gap-6"
-          onSubmit={handleSubmit}
-          encType="multipart/form-data"
-        >
-          {/* Full Name */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Full Name
-            </label>
-            <input
-              name="full_name"
-              type="text"
-              defaultValue={user.full_name}
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-              required
-            />
-          </div>
+        <Separator className="mb-8" />
 
-          {/* Official Title */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Official Title / Position
-            </label>
-            <input
-              name="official_title"
-              type="text"
-              defaultValue={user.official_title}
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
+        {/* Profile Form */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="">Personal Information</h3>
 
-          {/* Employee ID */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Employee ID
-            </label>
-            <input
-              name="employee_id"
-              type="text"
-              defaultValue={user.employee_id}
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="full_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter full name"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          {/* Official Email */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Official Email
-            </label>
-            <input
-              name="official_email"
-              type="email"
-              defaultValue={user.official_email}
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
+                <FormField
+                  control={form.control}
+                  name="official_title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Official Title</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter official title"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
-          {/* Mobile Number */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Mobile Number
-            </label>
-            <input
-              name="mobile_number"
-              type="text"
-              defaultValue={user.mobile_number}
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
-
-          {/* Alternative Contact */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Alternative Contact
-            </label>
-            <input
-              name="alternative_contact"
-              type="text"
-              defaultValue={user.alternative_contact || ""}
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
-
-          {/* Registered Institution */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Registered Institution
-            </label>
-            <input
-              name="registered_institution"
-              type="text"
-              defaultValue={user.registered_institution}
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
-
-          {/* Profile Picture */}
-          <div className="">
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Profile Picture
-            </label>
-            {user.profile_picture && (
-              <img
-                src={`/assets/images/profile_pictures/${user.profile_picture}`}
-                alt="Profile"
-                className="mb-2 h-24 w-24 rounded-full object-cover"
-              />
-            )}
-            <input
-              name="profile_picture"
-              type="file"
-              accept="image/*"
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              NIC Document (PDF or Image)
-            </label>
-            {user.nic_document && (
-              <a
-                href={`/assets/images/other_documents/${user.nic_document}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
-              >
-                <FiEye className="text-gray-600" />
-                View Current File
-              </a>
-            )}
-            <input
-              name="nic_document"
-              type="file"
-              accept="image/*,application/pdf"
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
-
-          {/* Birth Certificate */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Birth Certificate (PDF or Image)
-            </label>
-            {user.birth_certificate_document && (
-              <a
-                href={`/assets/images/other_documents/${user.birth_certificate_document}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
-              >
-                <FiEye className="text-gray-600" />
-                View Current File
-              </a>
-            )}
-            <input
-              name="birth_certificate_document"
-              type="file"
-              accept="image/*,application/pdf"
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
-
-          {/* Driving License */}
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Driving License (PDF or Image)
-            </label>
-            {user.driving_license_document && (
-              <a
-                href={`/assets/images/other_documents/${user.driving_license_document}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
-              >
-                <FiEye className="text-gray-600" />
-                View Current File
-              </a>
-            )}
-            <input
-              name="driving_license_document"
-              type="file"
-              accept="image/*,application/pdf"
-              className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            />
-          </div>
-
-          {/* Other Documents */}
-          {[1, 2, 3].map((i) => (
-            <div key={i}>
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Other Document {i} (PDF or Image)
-              </label>
-              {user[`other_document${i}` as keyof typeof user] && (
-                <a
-                  href={`/assets/images/other_documents/${user[`other_document${i}` as keyof typeof user]}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mb-3 inline-flex items-center gap-2 rounded-md bg-yellow-200 px-3 py-1 text-sm font-medium transition hover:bg-gray-200"
-                >
-                  <FiEye className="text-gray-600" />
-                  View Current File
-                </a>
-              )}
-              <input
-                name={`other_document${i}`}
-                type="file"
-                accept="image/*,application/pdf"
-                className="focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
+              <FormField
+                control={form.control}
+                name="employee_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employee ID</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter employee ID"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
             </div>
-          ))}
 
-          <button
-            type="submit"
-            className="bg-primary hover:bg-primary-dark rounded-md py-3 font-semibold transition"
-          >
-            Update Profile
-          </button>
-        </form>
+            <Separator />
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="">Contact Information</h3>
+
+              <FormField
+                control={form.control}
+                name="official_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Official Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="Enter official email"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="mobile_number"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mobile Number</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter mobile number"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="alternative_contact"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Alternative Contact</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Enter alternative contact"
+                          {...field}
+                          disabled={isSubmitting}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={form.control}
+                name="registered_institution"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Registered Institution</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter registered institution"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Profile Picture */}
+            <div className="space-y-4">
+              <h3 className="">Profile Picture</h3>
+
+              {user.profile_picture && (
+                <div className="flex items-center gap-4">
+                  <Image
+                    height={500}
+                    width={500}
+                    src={`/assets/images/profile_pictures/${user.profile_picture}`}
+                    alt="Current profile"
+                    className="border-input size-16 rounded-full border object-cover"
+                  />
+                  <div className="text-sm">
+                    <p className="font-medium">Current profile picture</p>
+                    <small className="text-muted-foreground">
+                      Choose a new file to replace
+                    </small>
+                  </div>
+                </div>
+              )}
+
+              <Input
+                name="profile_picture"
+                type="file"
+                accept="image/*"
+                className="file:bg-primary/10 file:text-primary hover:file:bg-primary/20 h-11 p-2 file:mr-4 file:rounded-full file:border-0 file:px-2.5 file:py-0 file:text-sm file:font-medium"
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Documents */}
+            <div className="space-y-4">
+              <h3 className="">Documents</h3>
+
+              <div className="flex flex-col gap-10">
+                {documentFields.map(({ name, label }) => {
+                  const currentDoc = user[name as keyof User] as string;
+                  return (
+                    <div key={name} className="flex flex-col gap-3">
+                      <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                        {label} (PDF or Image)
+                      </label>
+
+                      {currentDoc && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            asChild
+                          >
+                            <a
+                              href={`/assets/images/other_documents/${currentDoc}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2"
+                            >
+                              <Eye className="h-3 w-3" />
+                              View Current File
+                            </a>
+                          </Button>
+                        </div>
+                      )}
+
+                      <Input
+                        name={name}
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="file:bg-muted-foreground/10 file:text-muted-foreground hover:file:bg-muted-foreground/20 h-11 p-2 file:mr-4 file:rounded-full file:border-0 file:px-2.5 file:py-0 file:text-sm file:font-medium"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-6">
+              <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? "Updating..." : "Update Profile"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.reset()}
+                disabled={isSubmitting}
+              >
+                Reset
+              </Button>
+            </div>
+          </form>
+        </Form>
       </div>
-    </>
+    </div>
   );
 };
 
