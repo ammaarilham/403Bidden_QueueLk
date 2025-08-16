@@ -1,11 +1,43 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import Swal from "sweetalert2";
-import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Building, Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import * as z from "zod";
 
-type Institution = {
+import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+
+const formSchema = z.object({
+  office_name: z.string().min(1, "Office name is required"),
+  department_or_ministry: z.string().min(1, "Department/Ministry is required"),
+  office_type: z.string().min(1, "Office type is required"),
+  office_address: z.string().min(1, "Office address is required"),
+  district: z.string().min(1, "District is required"),
+  official_email: z.string().email("Please enter a valid email address"),
+  office_phone: z.string().optional(),
+  working_days: z
+    .array(z.string())
+    .min(1, "Please select at least one working day"),
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+interface Institution {
   id: number;
   office_name: string;
   department_or_ministry: string;
@@ -15,100 +47,93 @@ type Institution = {
   official_email: string;
   office_phone?: string;
   working_days: string[];
-};
+}
+
+const workingDaysOptions = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 const Page = () => {
-  const [workingDays, setWorkingDays] = useState<string[]>([]);
   const [success, setSuccess] = useState(false);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      office_name: "",
+      department_or_ministry: "",
+      office_type: "",
+      office_address: "",
+      district: "",
+      official_email: "",
+      office_phone: "",
+      working_days: [],
+    },
+  });
 
   useEffect(() => {
     fetch("http://localhost:5000/api/fetch_all_institutions")
       .then((res) => res.json())
       .then((data) => setInstitutions(data.institutions || []))
-      .catch((err) => console.error(err));
+      .catch((err) => {
+        console.error("Error fetching institutions:", err);
+        toast.error("Failed to load institutions");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const toggleDay = (day: string) => {
-    setWorkingDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
-    );
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const form = e.currentTarget;
-    const office_name = (
-      form.elements.namedItem("office_name") as HTMLInputElement
-    ).value;
-    const department_or_ministry = (
-      form.elements.namedItem("department_or_ministry") as HTMLInputElement
-    ).value;
-    const office_type = (
-      form.elements.namedItem("office_type") as HTMLInputElement
-    ).value;
-    const office_address = (
-      form.elements.namedItem("office_address") as HTMLInputElement
-    ).value;
-    const district = (form.elements.namedItem("district") as HTMLInputElement)
-      .value;
-    const official_email = (
-      form.elements.namedItem("official_email") as HTMLInputElement
-    ).value;
-    const office_phone = (
-      form.elements.namedItem("office_phone") as HTMLInputElement
-    ).value;
-
-    if (!workingDays.length) {
-      Swal.fire({
-        icon: "error",
-        title: "Validation Error",
-        text: "Please select at least one working day.",
-      });
-      return;
-    }
+  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
 
     try {
       const res = await fetch("http://localhost:5000/api/institutions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          office_name,
-          department_or_ministry,
-          office_type,
-          office_address,
-          district,
-          official_email,
-          office_phone,
-          working_days: workingDays, // <-- use your state here
-        }),
+        body: JSON.stringify(values),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        // ✅ set state to show success page
+        toast.success("Institution created successfully!", {
+          description: "The new institution has been added to the system.",
+        });
         setSuccess(true);
       } else {
-        Swal.fire({
-          icon: "error",
-          title: "Failed",
-          text: data.error || "Something went wrong.",
+        toast.error("Creation failed", {
+          description: data.error || "Something went wrong.",
         });
       }
     } catch (err) {
       console.error("Error:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Network Error",
-        text: "Please try again later.",
+      toast.error("Network error", {
+        description: "Please check your connection and try again.",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <div className="text-center">
+          <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
+          <p className="text-muted-foreground">Loading institutions...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (success) {
-    // Show success page instead of form
     return (
       <SuccessRedirectPage
         title="Institution created Successfully!"
@@ -122,202 +147,290 @@ const Page = () => {
     );
   }
 
-  const days = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
-  ];
-
   return (
-    <div className="flex min-h-screen w-full flex-col gap-10 px-4 py-20">
-      <div className="flex w-full items-center justify-center">
-        <motion.img
-          src="/assets/images/login/login-q-logo.png"
-          alt="Login Logo"
-          className="flex w-28 cursor-pointer rounded-xl"
-          whileHover={{ scale: 1.05 }}
-        />
-      </div>
-
-      <h2 className="mb-2 text-2xl font-bold">Add new Office/Institution</h2>
-
-      <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Office Name
-          </label>
-          <input
-            name="office_name"
-            type="text"
-            placeholder="Enter office name"
-            className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            required
-          />
+    <div className="flex min-h-dvh w-full flex-col items-center gap-10 py-20 pt-24">
+      <div className="mx-auto w-full max-w-2xl">
+        <div className="mb-6">
+          <h3>Add new Office/Institution</h3>
+          <small className="text-muted-foreground mt-2">
+            Create a new institution for the system
+          </small>
         </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Department / Ministry
-          </label>
-          <input
-            name="department_or_ministry"
-            type="text"
-            placeholder="Enter department or ministry"
-            className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            required
-          />
-        </div>
+        <Separator className="mb-8" />
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Office Type
-          </label>
-          <input
-            name="office_type"
-            type="text"
-            placeholder="Enter office type"
-            className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            required
-          />
-        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="office_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Office Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter office name"
+                      {...field}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Office Address
-          </label>
-          <input
-            name="office_address"
-            type="text"
-            placeholder="Enter office address"
-            className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            required
-          />
-        </div>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="department_or_ministry"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department / Ministry</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter department or ministry"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            District
-          </label>
-          <input
-            name="district"
-            type="text"
-            placeholder="Enter district"
-            className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            required
-          />
-        </div>
+              <FormField
+                control={form.control}
+                name="office_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Office Type</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter office type"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Official Email
-          </label>
-          <input
-            name="official_email"
-            type="email"
-            placeholder="Enter official email"
-            className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-            required
-          />
-        </div>
+            <div className="grid grid-cols-1 gap-6">
+              <FormField
+                control={form.control}
+                name="office_address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Office Address</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter office address"
+                        {...field}
+                        disabled={isSubmitting}
+                        className="min-h-32"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Office Phone
-          </label>
-          <input
-            name="office_phone"
-            type="text"
-            placeholder="Enter phone number"
-            className="focus:border-primary focus:ring-primary w-full rounded-md border border-gray-300 p-3 focus:outline-none focus:ring-2"
-          />
-        </div>
+              <FormField
+                control={form.control}
+                name="district"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>District</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter district"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Working Days
-          </label>
-          <div className="flex flex-col gap-2">
-            {days.map((day) => (
-              <label
-                key={day}
-                className="flex cursor-pointer items-center gap-2 rounded-md"
+            <div className="grid grid-cols-1 gap-6">
+              <FormField
+                control={form.control}
+                name="official_email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Official Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="Enter official email"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="office_phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Office Phone</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter phone number (optional)"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="working_days"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Working Days</FormLabel>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                    {workingDaysOptions.map((day) => (
+                      <FormField
+                        key={day}
+                        control={form.control}
+                        name="working_days"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={day}
+                              className="flex flex-row items-center"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(day)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, day])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== day
+                                          )
+                                        );
+                                  }}
+                                  disabled={isSubmitting}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal">
+                                {day}
+                              </FormLabel>
+                            </FormItem>
+                          );
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-3 pt-6">
+              <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? "Creating..." : "Create Institution"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => form.reset()}
+                disabled={isSubmitting}
               >
-                <input
-                  type="checkbox"
-                  checked={workingDays.includes(day)}
-                  onChange={() => toggleDay(day)}
-                  className="accent-primary"
-                />
-                <span className="text-gray-700">{day}</span>
-              </label>
-            ))}
+                Reset
+              </Button>
+            </div>
+          </form>
+        </Form>
+
+        <Separator className="my-8" />
+
+        {/* Existing Institutions */}
+        <div className="w-full">
+          <div className="mb-6">
+            <h3>Existing Institutions</h3>
+            <small className="text-muted-foreground mt-2">
+              Institutions currently registered in the system
+            </small>
           </div>
+
+          {institutions.length === 0 ? (
+            <p className="text-muted-foreground py-8 text-center">
+              No institutions added yet.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {institutions.map((institution, index) => (
+                <div key={institution.id}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex w-full flex-col gap-1">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Building className="h-4 w-4" />
+                          <h4 className="">{institution.office_name}</h4>
+                        </div>
+                        <small className="text-muted-foreground !text-xs">
+                          {institution.department_or_ministry} |{" "}
+                          {institution.office_type}
+                        </small>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 gap-4">
+                        <div className="border-input rounded-lg border p-3">
+                          <h5 className="font-medium">Address</h5>
+                          <small className="text-muted-foreground">
+                            {institution.office_address}, {institution.district}
+                          </small>
+                        </div>
+
+                        <div className="border-input rounded-lg border p-3">
+                          <h5 className="font-medium">Email</h5>
+                          <small className="text-muted-foreground">
+                            {institution.official_email}
+                          </small>
+                        </div>
+
+                        {institution.office_phone && (
+                          <div className="border-input rounded-lg border p-3">
+                            <h5 className="font-medium">Phone</h5>
+                            <small className="text-muted-foreground">
+                              {institution.office_phone}
+                            </small>
+                          </div>
+                        )}
+
+                        <div className="border-input rounded-lg border p-3">
+                          <h5 className="font-medium">Working Days</h5>
+                          <small className="text-muted-foreground">
+                            {Array.isArray(institution.working_days)
+                              ? institution.working_days.join(", ")
+                              : institution.working_days}
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {index !== institutions.length - 1 && <hr className="my-5" />}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-
-        <button
-          type="submit"
-          className="bg-primary hover:bg-primary-dark rounded-md py-3 font-semibold transition"
-        >
-          Confirm
-        </button>
-      </form>
-
-      {/* Existing Institutions */}
-      <div className="mt-10">
-        <h2 className="mb-6 pb-2 text-2xl font-bold text-gray-800">
-          Existing Institutions
-        </h2>
-
-        {institutions.length === 0 ? (
-          <div className="rounded-lg bg-gray-50 p-6 text-center text-gray-500 shadow-sm">
-            No institutions added yet.
-          </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            {institutions.map((inst) => (
-              <div
-                key={inst.id}
-                className="group flex flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 transition group-hover:text-indigo-600">
-                    {inst.office_name}
-                  </h3>
-                  <span className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700">
-                    {inst.office_type}
-                  </span>
-                </div>
-
-                {/* Department */}
-                <p className="mt-2 text-sm italic text-gray-600">
-                  {inst.department_or_ministry}
-                </p>
-
-                {/* Address & Contact */}
-                <div className="mt-3 space-y-1 text-sm text-gray-700">
-                  <p>
-                    📍 {inst.office_address}, {inst.district}
-                  </p>
-                  <p>📧 {inst.official_email}</p>
-                  {inst.office_phone && <p>📞 {inst.office_phone}</p>}
-                </div>
-
-                {/* Working Days */}
-                <div className="mt-4 text-sm text-gray-800">
-                  <span className="font-medium">🗓 Working Days: </span>
-                  {Array.isArray(inst.working_days)
-                    ? inst.working_days.join(", ")
-                    : inst.working_days}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
