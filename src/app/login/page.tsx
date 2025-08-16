@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Swal from "sweetalert2";
-import { motion } from "framer-motion";
-import { FaGoogle, FaApple, FaFacebookF } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { FaApple, FaFacebookF, FaGoogle } from "react-icons/fa";
+import { toast } from "sonner";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -18,9 +15,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 const formSchema = z.object({
   username: z.string().min(1, {
@@ -35,6 +34,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const Page = () => {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -77,6 +77,8 @@ const Page = () => {
   }, [router]);
 
   const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
+
     try {
       const res = await fetch("http://localhost:5000/api/login", {
         method: "POST",
@@ -88,31 +90,26 @@ const Page = () => {
       const data = await res.json();
 
       if (res.ok) {
-        await Swal.fire({
-          icon: "success",
-          title: "Login successful!",
-          text: "Redirecting to dashboard...",
-          timer: 2000,
-          timerProgressBar: true,
-          showConfirmButton: false,
+        toast.success("Login successful!", {
+          description: "Redirecting to dashboard...",
         });
 
-        if (data.type === 1) router.push("/admin-dashboard");
-        else if (data.type === 2) router.push("/customer-dashboard");
+        setTimeout(() => {
+          if (data.type === 1) router.push("/admin-dashboard");
+          else if (data.type === 2) router.push("/customer-dashboard");
+        }, 1500);
       } else {
-        Swal.fire({
-          icon: "error",
-          title: "Login failed",
-          text: data.error || "Invalid username or password",
+        toast.error("Login failed", {
+          description: data.error || "Invalid username or password",
         });
       }
     } catch (err) {
       console.error("Login error:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Login failed",
-        text: "Network error. Please try again.",
+      toast.error("Login failed", {
+        description: "Network error. Please try again.",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -142,6 +139,7 @@ const Page = () => {
                       placeholder="Enter your username or email"
                       {...field}
                       autoComplete="username"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <small className="text-muted-foreground">
@@ -164,6 +162,7 @@ const Page = () => {
                       placeholder="Enter your password"
                       {...field}
                       autoComplete="current-password"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <small className="text-muted-foreground">
@@ -180,8 +179,8 @@ const Page = () => {
               </Link>
             </div>
 
-            <Button type="submit" className="w-full">
-              Login
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Signing in..." : "Login"}
             </Button>
           </form>
         </Form>
@@ -210,9 +209,9 @@ const Page = () => {
         <div className="w-full text-center">
           <small className="!font-normal">
             Don't have an account?{" "}
-            <a className="font-semibold" href="/signup">
+            <Link href="/signup" className="font-semibold">
               Sign up
-            </a>
+            </Link>
           </small>
         </div>
       </div>

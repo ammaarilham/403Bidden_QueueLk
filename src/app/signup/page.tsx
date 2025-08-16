@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { FaGoogle, FaApple, FaFacebookF } from "react-icons/fa";
-import Swal from "sweetalert2";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { FaApple, FaFacebookF, FaGoogle } from "react-icons/fa";
+import { toast } from "sonner";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -18,10 +16,11 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
 
 const formSchema = z
   .object({
@@ -50,6 +49,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const Page = () => {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -63,6 +63,8 @@ const Page = () => {
   });
 
   const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
+
     try {
       const res = await fetch("http://localhost:5000/api/signup", {
         method: "POST",
@@ -77,30 +79,25 @@ const Page = () => {
       const data = await res.json();
 
       if (res.ok) {
-        await Swal.fire({
-          icon: "success",
-          title: "Signup successful!",
-          text: "You will be redirected to the login page.",
-          timer: 3000,
-          timerProgressBar: true,
-          showConfirmButton: false,
+        toast.success("Signup successful!", {
+          description: "Redirecting to login page...",
         });
 
-        router.push("/login");
+        setTimeout(() => {
+          router.push("/login");
+        }, 1500);
       } else {
-        Swal.fire({
-          icon: "error",
-          title: "Signup failed",
-          text: data.error || "Something went wrong.",
+        toast.error("Signup failed", {
+          description: data.error || "Something went wrong.",
         });
       }
     } catch (err) {
       console.error("Error signing up:", err);
-      Swal.fire({
-        icon: "error",
-        title: "Signup failed",
-        text: "A network error occurred. Please try again.",
+      toast.error("Signup failed", {
+        description: "A network error occurred. Please try again.",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -130,6 +127,7 @@ const Page = () => {
                       placeholder="Enter your username"
                       {...field}
                       autoComplete="username"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <small className="text-muted-foreground">
@@ -152,6 +150,7 @@ const Page = () => {
                       placeholder="Enter your email"
                       {...field}
                       autoComplete="email"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <small className="text-muted-foreground">
@@ -174,6 +173,7 @@ const Page = () => {
                       placeholder="Enter your password"
                       {...field}
                       autoComplete="new-password"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <small className="text-muted-foreground">
@@ -196,6 +196,7 @@ const Page = () => {
                       placeholder="Enter your password again"
                       {...field}
                       autoComplete="new-password"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <small className="text-muted-foreground">
@@ -216,6 +217,7 @@ const Page = () => {
                       checked={field.value}
                       onCheckedChange={field.onChange}
                       className="bg-background"
+                      disabled={isSubmitting}
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -228,8 +230,8 @@ const Page = () => {
               )}
             />
 
-            <Button type="submit" className="w-full">
-              Sign up
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? "Creating Account..." : "Sign up"}
             </Button>
           </form>
         </Form>
