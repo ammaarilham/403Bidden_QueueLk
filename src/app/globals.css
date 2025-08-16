@@ -154,7 +154,7 @@ h3 {
 }
 
 h4 {
-  @apply scroll-m-20 text-lg leading-[120%] tracking-tight;
+  @apply scroll-m-20 text-lg font-semibold leading-[120%] tracking-tight;
 }
 
 p {

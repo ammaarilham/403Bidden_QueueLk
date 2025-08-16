@@ -65,9 +65,9 @@ export default function CustomerLayout({
   }
 
   return (
-    <div>
+    <div className="pb-10 pt-4">
       <Navbar />
-      <main>{children}</main>
+      <main className="">{children}</main>
     </div>
   );
 }

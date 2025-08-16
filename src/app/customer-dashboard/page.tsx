@@ -5,6 +5,16 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AiOutlineArrowRight, AiOutlineClockCircle } from "react-icons/ai";
 import { useRouter } from "next/navigation";
+import { SvgButton } from "@/components/ui/svg-button";
+import {
+  ArrowRight,
+  ClockAlert,
+  Headphones,
+  MailSearch,
+  Wrench,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface Booking {
   booking_number: number;
@@ -31,67 +41,72 @@ const Page = () => {
 
   return (
     <>
-      <Navbar />
-      <div className="flex min-h-screen w-full flex-col px-4 pt-20">
-        <div className="flex gap-4">
-          <a href="/customer-dashboard/bookings">
-            <motion.img
-              src="/assets/images/customer-dashboard/queue-booking.png"
-              alt="Booking Image"
-              className="w-full cursor-pointer rounded-xl"
-            />
-          </a>
-          <a href="/customer-dashboard/inquiries">
-            <motion.img
-              src="/assets/images/customer-dashboard/inquiries.png"
-              alt="Inquiries Image"
-              className="w-full cursor-pointer rounded-xl"
-            />
-          </a>
-        </div>
-        <div className="mt-4">
-          <motion.img
-            src="/assets/images/customer-dashboard/support.png"
-            alt="Support"
-            className="w-full cursor-pointer rounded-xl"
-          />
+      <div className="flex min-h-dvh w-full flex-col items-center gap-10 py-20">
+        <div className="grid w-full grid-cols-2 gap-2">
+          <SvgButton
+            href="/admin-dashboard/users"
+            icon={MailSearch}
+            className="col-span-1 h-40"
+          >
+            Queue Booking
+          </SvgButton>
+          <SvgButton
+            href="/inquiries"
+            icon={Headphones}
+            className="col-span-1 h-40"
+          >
+            Inquiries
+          </SvgButton>
+          <SvgButton
+            href="/inquiries"
+            icon={Wrench}
+            className="col-span-2 h-40"
+          >
+            Support & Inquiries
+          </SvgButton>
         </div>
 
-        <div className="">
-          <h2 className="mb-6 mt-10 text-2xl font-bold">Recent Bookings</h2>
+        <div className="w-full">
+          <h3 className="mb-5">Recent Activities</h3>
 
           {recentBookings.length === 0 ? (
-            <p className="text-gray-500">No recent bookings found.</p>
+            <p className="text-muted-foreground">No recent bookings found.</p>
           ) : (
             recentBookings.map((b) => (
               <div key={b.booking_number}>
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-500">
-                      Booking #: {b.booking_number}
+                  <div className="flex flex-col gap-1">
+                    <span className="bg-primary/25 text-primary-foreground mb-2 w-fit rounded-full px-2.5 py-0.5 text-xs font-medium">
+                      Booking #{b.booking_number}
                     </span>
-                    <h3 className="text-lg font-semibold">{b.item_name}</h3>
-                    <p className="text-sm text-gray-500">
-                      Booking Date: {b.booking_date}
-                    </p>
+                    <h4 className="">{b.item_name}</h4>
+                    <small className="text-muted-foreground">
+                      {new Date(b.booking_date).toLocaleString("en-US", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </small>
                     {b.office && (
-                      <p className="text-sm text-gray-400">{b.office}</p>
+                      <small className="text-muted-foreground !text-xs">
+                        {b.office}
+                      </small>
                     )}
                   </div>
-                  <AiOutlineClockCircle size={28} className="text-gray-400" />
+                  <ClockAlert className="text-muted-foreground" />
                 </div>
-                <hr className="my-4" />
+                <hr className="my-5" />
               </div>
             ))
           )}
 
-          <button
-            onClick={() => router.push("/customer-dashboard/bookings")}
-            className="mx-auto mt-4 flex items-center gap-2 rounded-md bg-gray-200 px-4 py-2"
-          >
-            <span>See all bookings</span>
-            <AiOutlineArrowRight size={18} />
-          </button>
+          <div className="pt-4 text-center">
+            <Button variant={"secondary"} asChild className="">
+              <Link href="/customer-dashboard/bookings">
+                <span>See all bookings</span>
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
     </>
