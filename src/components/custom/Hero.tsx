@@ -1,27 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { AiOutlineArrowRight } from "react-icons/ai";
+import { ArrowRight, Settings, Users } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Button } from "../ui/button";
+import { SvgButton } from "../ui/svg-button";
+import Link from "next/link";
 
 const steps = [
   {
     title: "Book in Advance",
     description: "Reserve your government service slot before you visit.",
-    img: "/assets/images/hero/hero-img-1.png",
+    img: "/assets/images/hero/5.svg",
   },
   {
     title: "Skip the Queue",
     description:
       "Check in with your QR code and join the digital line instantly.",
-    img: "/assets/images/hero/hero-img-2.png",
+    img: "/assets/images/hero/2.svg",
   },
   {
     title: "Stay Updated",
     description:
-      "Get instant SMS updates and know exactly when it’s your turn.",
-    img: "/assets/images/hero/hero-img-3.png",
+      "Get instant SMS updates and know exactly when it's your turn.",
+    img: "/assets/images/hero/3.svg",
   },
 ];
 
@@ -43,74 +47,74 @@ const Hero = () => {
   };
 
   return (
-    <div className="flex h-screen w-full items-center justify-center px-4">
+    <div className="flex h-dvh w-full items-center justify-center px-4">
       {showRoleSelection ? (
-        <div className="flex flex-col items-center gap-4">
-          <h2 className="text-xl font-semibold">
-            Please select the account type
-          </h2>
-          <div className="flex gap-4">
-            <motion.img
-              src="/assets/images/hero/hero-user-bg-img.png"
-              alt="User Account"
-              className="w-50 md:w-50 cursor-pointer rounded-xl"
-              onClick={() => handleRoleSelect("user")}
-              whileHover={{ scale: 1.05 }}
-            />
-            <motion.img
-              src="/assets/images/hero/hero-admin-bg-img.png"
-              alt="Admin Account"
-              className="w-50 md:w-50 cursor-pointer rounded-xl"
-              onClick={() => handleRoleSelect("admin")}
-              whileHover={{ scale: 1.05 }}
-            />
+        <section className="flex h-dvh items-center justify-center text-center">
+          <div className="flex flex-col items-center gap-2">
+            <h3>Please select the account type</h3>
+            <div className="flex items-center gap-2">
+              <SvgButton
+                href="/login?role=admin"
+                icon={Settings}
+                onClick={() => handleRoleSelect("admin")}
+              >
+                Admin
+              </SvgButton>
+              <SvgButton
+                href="/login?role=user"
+                icon={Users}
+                onClick={() => handleRoleSelect("user")}
+              >
+                User
+              </SvgButton>
+            </div>
+            <small className="!font-normal">
+              You will be directed to the login once you select the account
+              type.
+            </small>
           </div>
-          <p className="text-center">
-            You will be directed to the login once you select the account type.
-          </p>
-        </div>
+        </section>
       ) : (
-        // Slides View
-        <div className="flex flex-col items-center justify-center">
-          <div>
-            <motion.img
-              src="/assets/images/hero/logo-4.png"
-              alt="BG Remover Logo"
-              className="w-50 md:w-50 rounded-xl"
-              initial={{ scale: 1 }}
-              whileHover={{ scale: 1.05 }}
-            />
+        <div className="flex flex-col items-center justify-center gap-16">
+          <div className="select-none">
+            <Link href="/">
+              <Image
+                width={163}
+                height={48}
+                src="/assets/branding/submark-logo.svg"
+                alt="queue.lk logo"
+              />
+            </Link>
           </div>
 
-          <div className="flex flex-col items-center justify-center p-10 text-center">
-            <h2 className="mb-3 text-2xl font-bold">
-              {steps[stepIndex].title}
-            </h2>
-            <p className="mb-5">{steps[stepIndex].description}</p>
-
-            <motion.img
+          <div className="flex flex-col items-center justify-center px-8 text-center">
+            <div className="">
+              <h3 className="mb-1">{steps[stepIndex].title}</h3>
+              <small className="!font-normal">
+                {steps[stepIndex].description}
+              </small>
+            </div>
+            <motion.div
               key={steps[stepIndex].img}
-              src={steps[stepIndex].img}
-              alt={steps[stepIndex].title}
-              className="rounded-xl transition duration-300 ease-in-out hover:scale-105"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              whileHover={{ scale: 1.05 }}
-            />
+              className="mb-8"
+            >
+              <Image
+                width={120}
+                height={300}
+                src={steps[stepIndex].img}
+                alt={steps[stepIndex].title}
+                className="h-80 w-full"
+              />
+            </motion.div>
           </div>
 
-          <div>
-            <button
-              onClick={handleNext}
-              className="bg-primary flex items-center gap-2 rounded-sm p-2"
-            >
-              <span>
-                {stepIndex === steps.length - 1 ? "Get Started" : "Next"}
-              </span>
-              <AiOutlineArrowRight />
-            </button>
-          </div>
+          <Button onClick={handleNext}>
+            {stepIndex === steps.length - 1 ? "Get Started" : "Next"}
+            <ArrowRight />
+          </Button>
         </div>
       )}
     </div>

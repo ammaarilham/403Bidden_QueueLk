@@ -21,8 +21,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={cn("relative h-full antialiased", inter.className)}>
-        <main className="relative flex min-h-screen flex-col">
+      <body
+        className={cn(
+          "bg-background text-foreground relative h-full antialiased",
+          inter.className
+        )}
+      >
+        <main className="sm:border-input relative mx-auto flex min-h-screen max-w-sm flex-col sm:border-x px-5">
           <div className="flex-1 flex-grow">{children}</div>
         </main>
       </body>
