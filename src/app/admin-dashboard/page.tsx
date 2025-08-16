@@ -5,8 +5,10 @@ import { SvgButton } from "@/components/ui/svg-button";
 import {
   Server,
   Settings,
+  UserCheck,
   UserCheck2Icon,
   Users,
+  UserSearch,
   Wrench
 } from "lucide-react";
 
@@ -31,7 +33,14 @@ const Page = () => {
           </SvgButton>
           <SvgButton
             href="/admin-dashboard/users"
-            icon={UserCheck2Icon}
+            icon={UserCheck}
+            className="col-span-1 h-40"
+          >
+            Manage Admin
+          </SvgButton>
+          <SvgButton
+            href="/admin-dashboard/customer-list"
+            icon={UserSearch}
             className="col-span-1 h-40"
           >
             Manage Users
@@ -46,9 +55,9 @@ const Page = () => {
           <SvgButton
             href="/inquiries"
             icon={Wrench}
-            className="col-span-2 h-40"
+            className="col-span-1 h-40"
           >
-            Support & Inquiries
+            Support/Inquiries
           </SvgButton>
         </div>
 
