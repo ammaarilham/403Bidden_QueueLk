@@ -1,10 +1,6 @@
 "use client";
 
-import Navbar from "@/components/shared/Navbar";
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { AiOutlineArrowRight, AiOutlineClockCircle } from "react-icons/ai";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import { SvgButton } from "@/components/ui/svg-button";
 import {
   ArrowRight,
@@ -13,8 +9,9 @@ import {
   MailSearch,
   Wrench,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface Booking {
   booking_number: number;
@@ -31,7 +28,7 @@ const Page = () => {
 
   useEffect(() => {
     // Fetch recent bookings (latest 3)
-    fetch("http://localhost:5000/api/fetch-bookings?limit=3", {
+    fetch("http://localhost:5000/api/fetch-bookings?limit=6", {
       credentials: "include",
     })
       .then((res) => res.json())
