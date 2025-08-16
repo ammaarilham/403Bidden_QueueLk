@@ -1,65 +1,46 @@
 "use client";
 
-import Navbar from "@/components/shared/Navbar";
-import React from "react";
-import { motion } from "framer-motion";
-import { AiOutlineArrowLeft, AiOutlineArrowRight } from "react-icons/ai";
-import { AiOutlineClockCircle } from "react-icons/ai";
+import { ChartLineDefault } from "@/components/custom/chart-line-default";
+import { Button } from "@/components/ui/button";
+import { SvgButton } from "@/components/ui/svg-button";
+import { Settings, ToolCase, Users } from "lucide-react";
+import Link from "next/link";
 
 const Page = () => {
   return (
     <>
-      {/* <Navbar /> */}
-      <div className="flex min-h-screen w-full flex-col px-4 pt-20">
-        <div className="flex h-auto w-full flex-col gap-4">
-          <div className="flex gap-4">
-            <a href="/admin-dashboard/institutions">
-              <motion.img
-                src="/assets/images/admin-dashboard/institutions.png"
-                alt="Booking Image"
-                className="w-full cursor-pointer rounded-xl"
-              />
-            </a>
-            <a href="/admin-dashboard/events">
-              <motion.img
-                src="/assets/images/admin-dashboard/add-event.png"
-                alt="Inquiries Image"
-                className="w-full cursor-pointer rounded-xl"
-              />
-            </a>
-          </div>
-          <div className="flex gap-4">
-            <a href="/admin-dashboard/services">
-              <motion.img
-                src="/assets/images/admin-dashboard/add-service.png"
-                alt="Booking Image"
-                className="w-full cursor-pointer rounded-xl"
-              />
-            </a>
-            <a href="/inquiries">
-              <motion.img
-                src="/assets/images/admin-dashboard/support.png"
-                alt="Inquiries Image"
-                className="w-full cursor-pointer rounded-xl"
-              />
-            </a>
-          </div>
+      <div className="flex min-h-dvh w-full flex-col items-center py-20">
+        <div className="grid w-full grid-cols-2 gap-2">
+          <SvgButton
+            href="/admin-dashboard/services"
+            icon={Settings}
+            className="col-span-1 h-40"
+          >
+            Add Services
+          </SvgButton>
+          <SvgButton
+            href="/admin-dashboard/events"
+            icon={Users}
+            className="col-span-1 h-40"
+          >
+            Add Event
+          </SvgButton>
+          <SvgButton
+            href="/inquiries"
+            icon={ToolCase}
+            className="col-span-2 h-40"
+          >
+            Support
+          </SvgButton>
         </div>
 
         <div className="my-5">
-          <p className="mb-6 text-sm text-gray-600">temporary buttons</p>
-          <a
-            href="/admin-dashboard/users"
-            className="rounded-sm bg-black p-2 text-white"
-          >
-            Manage Users
-          </a>
+          <Link href="/admin-dashboard/users">
+            <Button variant={"outline"}>Manage Users</Button>
+          </Link>
         </div>
 
-        <p>
-          Need like 2 graphs here and you have to create a button for the users
-          too. just put it temporary here
-        </p>
+        <ChartLineDefault />
       </div>
     </>
   );

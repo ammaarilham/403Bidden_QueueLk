@@ -125,11 +125,12 @@ const Hero = () => {
         <section className="flex h-dvh items-center justify-center text-center">
           <div className="flex flex-col items-center gap-2">
             <h3>Please select the account type</h3>
-            <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-2 gap-2">
               <SvgButton
                 href="/login?role=admin"
                 icon={Settings}
                 onClick={() => handleRoleSelect("admin")}
+                className="h-40"
               >
                 Admin
               </SvgButton>
@@ -137,6 +138,7 @@ const Hero = () => {
                 href="/login?role=user"
                 icon={Users}
                 onClick={() => handleRoleSelect("user")}
+                className="h-40"
               >
                 User
               </SvgButton>

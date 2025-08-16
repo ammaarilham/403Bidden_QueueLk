@@ -46,7 +46,7 @@ export default function AdminLayout({
   }
 
   return (
-    <div className="">
+    <div className="py-20">
       <Navbar />
       <main className="">{children}</main>
     </div>

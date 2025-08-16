@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { HiMenu, HiX, HiOutlineLogout } from "react-icons/hi";
-import { FaTicketAlt } from "react-icons/fa";
-import { FiMail, FiTool, FiSettings } from "react-icons/fi";
-import { AiOutlineDashboard } from "react-icons/ai";
 import { motion } from "framer-motion";
-import { TbUsers } from "react-icons/tb";
+import { Menu, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { AiOutlineDashboard } from "react-icons/ai";
 import { CiSettings } from "react-icons/ci";
+import { FaTicketAlt } from "react-icons/fa";
+import { FiMail, FiSettings, FiTool } from "react-icons/fi";
+import { HiOutlineLogout } from "react-icons/hi";
+import { TbUsers } from "react-icons/tb";
+import { Button } from "../ui/button";
 
 type User = {
   username: string;
@@ -118,7 +120,7 @@ const Navbar: React.FC = () => {
 
   return (
     <>
-      <nav className="sh fixed left-0 right-0 top-0 flex items-center justify-between bg-white px-4 py-3">
+      <nav className="bg-background fixed left-0 right-0 top-0 z-50 mx-auto flex max-w-sm items-center justify-between border-x px-4 pb-4 pt-20">
         <div
           onClick={() =>
             router.push(
@@ -132,24 +134,30 @@ const Navbar: React.FC = () => {
           <img
             src={user.profilePicUrl}
             alt="Profile"
-            className="h-12 w-12 rounded-full object-cover"
+            className="border-input size-9 rounded-full border object-cover"
           />
           <div className="flex flex-col leading-tight">
-            <span className="text-lg font-semibold text-gray-800">
-              {user.username}
-            </span>
-            <span className="text-xs text-gray-500">{userTypeLabel}</span>
+            <small className="text-muted-foreground !text-xs !leading-[110%]">
+              Hello there,
+            </small>
+            <small className="text-lg font-semibold">{user.username}</small>
           </div>
+
+          <small className="rounded-2xl bg-green-100 px-2 py-0.5 !text-xs uppercase text-green-600">
+            {userTypeLabel}
+          </small>
         </div>
 
         {!menuOpen && (
-          <button
+          <Button
             onClick={() => setMenuOpen(true)}
-            className="focus:ring-primary rounded-md text-gray-800 focus:outline-none focus:ring-2"
+            variant={"ghost"}
+            size={"icon"}
             aria-label="Open menu"
+            className="flex size-8 items-center justify-center"
           >
-            <HiMenu size={28} />
-          </button>
+            <Menu className="size-5" />
+          </Button>
         )}
       </nav>
 
@@ -160,30 +168,32 @@ const Navbar: React.FC = () => {
         }`}
       >
         <div>
-          <div className="mb-8 flex items-center justify-between p-4">
-            <button
+          <div className="mb-4 flex flex-row-reverse items-center justify-between p-4">
+            <Button
               onClick={() => setMenuOpen(false)}
-              className="focus:ring-primary absolute right-4 top-4 rounded-md p-1 text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2"
-              aria-label="Close menu"
+              variant={"ghost"}
+              size={"icon"}
+              aria-label="Open menu"
+              className="flex size-8 items-center justify-center"
             >
-              <HiX size={28} />
-            </button>
+              <X className="size-5" />
+            </Button>
 
             <motion.img
               src="/assets/images/hero/logo-4.png"
               alt="Logo"
               className="w-40 rounded-xl"
               initial={{ scale: 1 }}
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.01 }}
             />
           </div>
 
-          <nav className="flex flex-col space-y-4 px-6">
+          <nav className="flex flex-col space-y-4 px-4">
             {pages.map(({ name, href, icon }) => (
               <a
                 key={name}
                 href={href}
-                className="hover:text-primary flex items-center gap-3 text-lg font-medium"
+                className="hover:text-primary flex items-center gap-3 text-base font-medium transition-all duration-300 ease-in-out"
                 onClick={() => setMenuOpen(false)}
               >
                 {icon}
@@ -193,13 +203,14 @@ const Navbar: React.FC = () => {
           </nav>
         </div>
 
-        <button
+        <Button
+          variant={"ghost"}
           onClick={handleLogout}
-          className="mx-6 mb-6 flex items-center gap-3 rounded-md px-4 py-2 text-red-600"
+          className="mx-4 mb-4 flex items-center gap-3 rounded-md px-4 py-2 text-red-600"
         >
           <HiOutlineLogout size={20} />
           Logout
-        </button>
+        </Button>
       </div>
 
       {/* Overlay */}
