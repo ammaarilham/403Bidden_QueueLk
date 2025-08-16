@@ -1,13 +1,33 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 import SuccessRedirectPage from "@/components/shared/SuccessRedirectPage";
 
+type Institution = {
+  id: number;
+  office_name: string;
+  department_or_ministry: string;
+  office_type: string;
+  office_address: string;
+  district: string;
+  official_email: string;
+  office_phone?: string;
+  working_days: string[];
+};
+
 const Page = () => {
   const [workingDays, setWorkingDays] = useState<string[]>([]);
   const [success, setSuccess] = useState(false);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+
+  useEffect(() => {
+    fetch("http://localhost:5000/api/fetch_all_institutions")
+      .then((res) => res.json())
+      .then((data) => setInstitutions(data.institutions || []))
+      .catch((err) => console.error(err));
+  }, []);
 
   const toggleDay = (day: string) => {
     setWorkingDays((prev) =>
@@ -245,6 +265,60 @@ const Page = () => {
           Confirm
         </button>
       </form>
+
+      {/* Existing Institutions */}
+      <div className="mt-10">
+        <h2 className="mb-6 pb-2 text-2xl font-bold text-gray-800">
+          Existing Institutions
+        </h2>
+
+        {institutions.length === 0 ? (
+          <div className="rounded-lg bg-gray-50 p-6 text-center text-gray-500 shadow-sm">
+            No institutions added yet.
+          </div>
+        ) : (
+          <div className="flex flex-col gap-6">
+            {institutions.map((inst) => (
+              <div
+                key={inst.id}
+                className="group flex flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-gray-900 transition group-hover:text-indigo-600">
+                    {inst.office_name}
+                  </h3>
+                  <span className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700">
+                    {inst.office_type}
+                  </span>
+                </div>
+
+                {/* Department */}
+                <p className="mt-2 text-sm italic text-gray-600">
+                  {inst.department_or_ministry}
+                </p>
+
+                {/* Address & Contact */}
+                <div className="mt-3 space-y-1 text-sm text-gray-700">
+                  <p>
+                    📍 {inst.office_address}, {inst.district}
+                  </p>
+                  <p>📧 {inst.official_email}</p>
+                  {inst.office_phone && <p>📞 {inst.office_phone}</p>}
+                </div>
+
+                {/* Working Days */}
+                <div className="mt-4 text-sm text-gray-800">
+                  <span className="font-medium">🗓 Working Days: </span>
+                  {Array.isArray(inst.working_days)
+                    ? inst.working_days.join(", ")
+                    : inst.working_days}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -44,21 +44,21 @@ const Page = () => {
       <div className="flex min-h-dvh w-full flex-col items-center gap-10 py-20">
         <div className="grid w-full grid-cols-2 gap-2">
           <SvgButton
-            href="/admin-dashboard/users"
+            href="/customer-dashboard/bookings"
             icon={MailSearch}
             className="col-span-1 h-40"
           >
             Queue Booking
           </SvgButton>
           <SvgButton
-            href="/inquiries"
+            href="/customer-dashboard/inquiries"
             icon={Headphones}
             className="col-span-1 h-40"
           >
             Inquiries
           </SvgButton>
           <SvgButton
-            href="/inquiries"
+            href="/customer-dashboard/inquiries"
             icon={Wrench}
             className="col-span-2 h-40"
           >

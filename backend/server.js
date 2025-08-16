@@ -79,15 +79,20 @@ app.use(
 
 // const upload = multer({ storage });
 
-
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     let uploadPath;
 
     if (file.fieldname === "profile_picture") {
-      uploadPath = path.join(__dirname, "../public/assets/images/profile_picture");
+      uploadPath = path.join(
+        __dirname,
+        "../public/assets/images/profile_picture"
+      );
     } else {
-      uploadPath = path.join(__dirname, "../public/assets/images/other_documents");
+      uploadPath = path.join(
+        __dirname,
+        "../public/assets/images/other_documents"
+      );
     }
 
     // Ensure folder exists
@@ -124,91 +129,6 @@ app.get("/api/profile", async (req, res) => {
   }
 });
 
-// app.post(
-//   "/api/profile/update",
-//   upload.single("profile_picture"),
-//   async (req, res) => {
-//     try {
-//       if (!req.session.user)
-//         return res.status(401).json({ error: "Not logged in" });
-
-//       const {
-//         full_name,
-//         official_title,
-//         employee_id,
-//         official_email,
-//         mobile_number,
-//         alternative_contact,
-//         registered_institution,
-//       } = req.body;
-
-//       let profile_picture = null;
-
-//       if (req.file) {
-//         // Multer already saved the file in the correct folder
-//         console.log("File received by multer:");
-//         console.log("Original name:", req.file.originalname);
-//         console.log("Saved name:", req.file.filename);
-//         console.log("Saved path:", req.file.path);
-//         console.log("MIME type:", req.file.mimetype);
-//         console.log("Size:", req.file.size);
-
-//         // Optional: read the file to confirm
-//         const filePath = req.file.path;
-//         fs.readFile(filePath, (err, data) => {
-//           if (err) console.error("Error reading file after upload:", err);
-//           else console.log("File read successfully, bytes:", data.length);
-//         });
-
-//         profile_picture = req.file.filename;
-
-//         // Update session
-//         if (req.session.user) {
-//           req.session.user.profile_picture = profile_picture;
-//         }
-//       } else {
-//         console.log("No file uploaded in this request");
-//       }
-
-//       // Build query dynamically for optional fields
-//       const fields = [];
-//       const values = [];
-
-//       if (full_name) fields.push("full_name = ?") && values.push(full_name);
-//       if (official_title)
-//         fields.push("official_title = ?") && values.push(official_title);
-//       if (employee_id)
-//         fields.push("employee_id = ?") && values.push(employee_id);
-//       if (official_email)
-//         fields.push("official_email = ?") && values.push(official_email);
-//       if (mobile_number)
-//         fields.push("mobile_number = ?") && values.push(mobile_number);
-//       if (alternative_contact)
-//         fields.push("alternative_contact = ?") &&
-//           values.push(alternative_contact);
-//       if (registered_institution)
-//         fields.push("registered_institution = ?") &&
-//           values.push(registered_institution);
-//       if (profile_picture)
-//         fields.push("profile_picture = ?") && values.push(profile_picture);
-
-//       if (fields.length === 0)
-//         return res.status(400).json({ error: "No fields to update" });
-
-//       console.log("Updating DB with fields:", fields.join(", "));
-
-//       const sql = `UPDATE users SET ${fields.join(", ")} WHERE id = ?`;
-//       values.push(req.session.user.id);
-
-//       await pool.query(sql, values);
-
-//       res.json({ message: "Profile updated successfully" });
-//     } catch (err) {
-//       console.error("Error in profile update route:", err);
-//       res.status(500).json({ error: "Server error" });
-//     }
-//   }
-// );
 app.post(
   "/api/profile/update",
   upload.fields([
@@ -266,9 +186,11 @@ app.post(
       if (mobile_number)
         fields.push("mobile_number = ?") && values.push(mobile_number);
       if (alternative_contact)
-        fields.push("alternative_contact = ?") && values.push(alternative_contact);
+        fields.push("alternative_contact = ?") &&
+          values.push(alternative_contact);
       if (registered_institution)
-        fields.push("registered_institution = ?") && values.push(registered_institution);
+        fields.push("registered_institution = ?") &&
+          values.push(registered_institution);
 
       if (profile_picture)
         fields.push("profile_picture = ?") && values.push(profile_picture);
@@ -500,6 +422,38 @@ app.get("/api/fetch_institutions", async (req, res) => {
   }
 });
 
+app.get("/api/fetch_all_institutions", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT 
+         id,
+         office_name,
+         department_or_ministry,
+         office_type,
+         office_address,
+         district,
+         official_email,
+         office_phone,
+         working_days
+       FROM institutions
+       ORDER BY id DESC`
+    );
+
+    // Convert working_days (comma-separated) into array for frontend
+    const formatted = rows.map((inst) => ({
+      ...inst,
+      working_days: inst.working_days
+        ? inst.working_days.split(",").map((d) => d.trim())
+        : [],
+    }));
+
+    res.json({ institutions: formatted });
+  } catch (err) {
+    console.error("Error fetching institutions:", err);
+    res.status(500).json({ error: "Failed to fetch institutions" });
+  }
+});
+
 // Get & Fetch Services ----------------------------------------------------------
 
 app.post("/api/services", async (req, res) => {
@@ -641,30 +595,59 @@ app.post("/api/admin-access", async (req, res) => {
   }
 });
 
-app.get("/api/fetch_users", async (req, res) => {
+app.get("/api/fetch_admin_records", async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT 
-         u.id,
-         u.full_name,
-         u.username as username,
-         u.email,
-         u.mobile_number AS phone,
-         u.type AS role,
-         u.official_title,
-         u.employee_id,
-         u.alternative_contact,
-         u.registered_institution,
-         i.office_name AS institution_name
-       FROM users u
-       LEFT JOIN institutions i ON u.registered_institution = i.id
-       ORDER BY u.id DESC`
+     u.id,
+     u.full_name,
+     u.username AS username,
+     u.email,
+     u.mobile_number AS phone,
+     u.type AS role,
+     u.official_title,
+     u.employee_id,
+     u.alternative_contact,
+     u.registered_institution,
+     i.office_name AS institution_name
+   FROM users u
+   LEFT JOIN institutions i ON u.registered_institution = i.id
+   WHERE u.type = 1
+   ORDER BY u.id DESC`
     );
 
     res.json({ users: rows });
   } catch (err) {
     console.error("Error fetching users:", err);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+app.get("/api/fetch_customer_records", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT 
+     u.id,
+     u.full_name,
+     u.username AS username,
+     u.email,
+     u.mobile_number AS phone,
+     u.type AS role,
+     u.official_title,
+     u.employee_id,
+     u.alternative_contact,
+     u.registered_institution,
+     i.office_name AS institution_name
+   FROM users u
+   LEFT JOIN institutions i ON u.registered_institution = i.id
+   WHERE u.type = 2
+   ORDER BY u.id DESC`
+    );
+
+    res.json({ users: rows });
+  } catch (err) {
+    console.error("Error fetching customers:", err);
+    res.status(500).json({ error: "Failed to fetch customers" });
   }
 });
 
@@ -729,14 +712,13 @@ app.get("/api/fetch_events", async (req, res) => {
   }
 });
 
-
 // Get & Fetch Bookings ----------------------------------------------------------
-
 
 // POST /api/add-booking
 app.post("/api/add-booking", async (req, res) => {
   try {
-    if (!req.session.user) return res.status(401).json({ error: "Not logged in" });
+    if (!req.session.user)
+      return res.status(401).json({ error: "Not logged in" });
 
     const { type, item_id, booking_date } = req.body;
     const user_id = req.session.user.id;
@@ -750,19 +732,26 @@ app.post("/api/add-booking", async (req, res) => {
     // Fetch event/service details
     let [itemRows] = [];
     if (type === "event") {
-      [itemRows] = await pool.query("SELECT * FROM events WHERE id = ?", [item_id]);
+      [itemRows] = await pool.query("SELECT * FROM events WHERE id = ?", [
+        item_id,
+      ]);
     } else {
-      [itemRows] = await pool.query("SELECT * FROM services WHERE id = ?", [item_id]);
+      [itemRows] = await pool.query("SELECT * FROM services WHERE id = ?", [
+        item_id,
+      ]);
     }
 
-    if (!itemRows.length) return res.status(404).json({ error: "Item not found" });
+    if (!itemRows.length)
+      return res.status(404).json({ error: "Item not found" });
 
     const item = itemRows[0];
 
     // Check date & slot availability
     if (type === "event") {
       if (booking_date !== item.event_date)
-        return res.status(400).json({ error: "Booking date must match event date" });
+        return res
+          .status(400)
+          .json({ error: "Booking date must match event date" });
 
       const [[{ count }]] = await pool.query(
         "SELECT COUNT(*) AS count FROM bookings WHERE type=? AND item_id=? AND booking_date=?",
@@ -773,10 +762,14 @@ app.post("/api/add-booking", async (req, res) => {
         return res.status(400).json({ error: "Selected slot is full" });
     } else {
       // service
-      const bookingDay = new Date(booking_date).toLocaleDateString("en-US", { weekday: "long" });
+      const bookingDay = new Date(booking_date).toLocaleDateString("en-US", {
+        weekday: "long",
+      });
 
       if (!item.days_of_week.split(",").includes(bookingDay))
-        return res.status(400).json({ error: `Service not available on ${bookingDay}` });
+        return res
+          .status(400)
+          .json({ error: `Service not available on ${bookingDay}` });
 
       const [[{ count }]] = await pool.query(
         "SELECT COUNT(*) AS count FROM bookings WHERE type=? AND item_id=? AND booking_date=?",
@@ -805,24 +798,68 @@ app.post("/api/add-booking", async (req, res) => {
 });
 
 // GET /api/fetch-bookings
+// app.get("/api/fetch-bookings", async (req, res) => {
+//   try {
+//     if (!req.session.user)
+//       return res.status(401).json({ error: "Not logged in" });
+
+//     const user_id = req.session.user.id;
+
+//     const [rows] = await pool.query(
+//       `SELECT 
+//           b.id AS booking_number,
+//           b.type, 
+//           CASE WHEN b.type='event' THEN e.event_name ELSE s.service_name END AS item_name,
+//           b.booking_date, 
+//           b.created_at
+//        FROM bookings b
+//        LEFT JOIN events e ON b.item_id = e.id AND b.type='event'
+//        LEFT JOIN services s ON b.item_id = s.id AND b.type='service'
+//        WHERE b.user_id=? 
+//        ORDER BY b.created_at DESC`,
+//       [user_id]
+//     );
+
+//     res.json({ bookings: rows });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
 app.get("/api/fetch-bookings", async (req, res) => {
   try {
-    if (!req.session.user) return res.status(401).json({ error: "Not logged in" });
+    if (!req.session.user)
+      return res.status(401).json({ error: "Not logged in" });
 
     const user_id = req.session.user.id;
 
+    // Use MySQL user variables to generate slot numbers
     const [rows] = await pool.query(
       `SELECT 
-          b.id AS booking_number,
-          b.type, 
-          CASE WHEN b.type='event' THEN e.event_name ELSE s.service_name END AS item_name,
-          b.booking_date, 
-          b.created_at
-       FROM bookings b
-       LEFT JOIN events e ON b.item_id = e.id AND b.type='event'
-       LEFT JOIN services s ON b.item_id = s.id AND b.type='service'
-       WHERE b.user_id=? 
-       ORDER BY b.created_at DESC`,
+          booking_number,
+          type,
+          item_name,
+          booking_date,
+          created_at,
+          slot_id
+       FROM (
+         SELECT 
+           b.id AS booking_number,
+           b.type,
+           CASE WHEN b.type='event' THEN e.event_name ELSE s.service_name END AS item_name,
+           b.booking_date,
+           b.created_at,
+           @slot := IF(@prev_item = b.item_id AND @prev_date = b.booking_date, @slot + 1, 1) AS slot_id,
+           @prev_item := b.item_id,
+           @prev_date := b.booking_date
+         FROM bookings b
+         LEFT JOIN events e ON b.item_id = e.id AND b.type='event'
+         LEFT JOIN services s ON b.item_id = s.id AND b.type='service'
+         CROSS JOIN (SELECT @slot := 0, @prev_item := 0, @prev_date := '') AS vars
+         WHERE b.user_id = ?
+         ORDER BY b.booking_date ASC, b.created_at ASC
+       ) AS t`,
       [user_id]
     );
 
@@ -834,9 +871,11 @@ app.get("/api/fetch-bookings", async (req, res) => {
 });
 
 
+
 app.get("/api/bookings-count", async (req, res) => {
   try {
-    if (!req.session.user) return res.status(401).json({ error: "Not logged in" });
+    if (!req.session.user)
+      return res.status(401).json({ error: "Not logged in" });
 
     const user_id = req.session.user.id;
     const [rows] = await pool.query(
@@ -850,6 +889,5 @@ app.get("/api/bookings-count", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 app.listen(5000, () => console.log("Server running on port 5000"));

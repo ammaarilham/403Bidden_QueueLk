@@ -37,6 +37,7 @@ interface Booking {
   type: "event" | "service";
   item_name: string;
   booking_date: string;
+  slot_id: number; // <-- new field
   created_at: string;
 }
 
@@ -403,8 +404,9 @@ const Page = () => {
               <div key={booking.booking_number}>
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col gap-1">
-                    <span className="bg-primary/25 text-primary-foreground mb-2 w-fit rounded-full px-2.5 py-0.5 text-xs font-medium">
-                      Booking #{booking.booking_number}
+                    <span className="mb-2 inline-block w-fit rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+                      Booking #: {booking.booking_number} | Slot ID:{" "}
+                      {booking.slot_id}
                     </span>
                     <h4>{booking.item_name}</h4>
                     <small className="text-muted-foreground">

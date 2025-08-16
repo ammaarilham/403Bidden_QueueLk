@@ -33,7 +33,7 @@ const Page = () => {
 
   // Fetch existing users
   useEffect(() => {
-    fetch("http://localhost:5000/api/fetch_users")
+    fetch("http://localhost:5000/api/fetch_admin_records")
       .then((res) => res.json())
       .then((data) => setUsers(data.users || []))
       .catch((err) => console.error("Error fetching users:", err));
