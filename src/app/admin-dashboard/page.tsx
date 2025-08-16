@@ -48,17 +48,17 @@ const Page = () => {
           <SvgButton
             href="/admin-dashboard/institutions"
             icon={Server}
-            className="col-span-1 h-40"
+            className="col-span-2 h-40"
           >
             Add Institution{" "}
           </SvgButton>
-          <SvgButton
+          {/* <SvgButton
             href="/inquiries"
             icon={Wrench}
             className="col-span-1 h-40"
           >
             Support/Inquiries
-          </SvgButton>
+          </SvgButton> */}
         </div>
 
         <ChartLineDefault />
