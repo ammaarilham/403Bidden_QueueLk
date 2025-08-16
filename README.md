@@ -287,9 +287,12 @@ CREATE DATABASE queue_lk;
 
 ## 👥 Team Information
 
-**Team Name:** 403bidden  
-**Competition:** Tech-Triathlon 2025  
-**Focus Area:** Government Service Digitization  
+**Team Name:** 403bidden
+
+**Team Members:**
+- **Ammaar Ilham** - [www.ammaarilham.dev](https://www.ammaarilham.dev/)
+- **Thilina Rathnayaka** - [thilina.dev](https://thilina.dev/)
+
 **Repository:** https://github.com/ammaarilham/403Bidden_QueueLk.git
 
 ---
